@@ -15,25 +15,41 @@
       {% if current_user %}
         <div class="user-chip">
           <strong>{{ current_user.email }}</strong>
-          <small>{{ 'Administrador' if current_user.role == 'admin' else 'Usuario' }}</small>
+          <small>{{ current_user.role }}</small>
         </div>
       {% endif %}
     </div>
     <nav>
       <a class="{% if request.endpoint == 'dashboard' %}active{% endif %}" href="{{ url_for('dashboard') }}">Dashboard</a>
       <a class="{% if request.endpoint == 'account' %}active{% endif %}" href="{{ url_for('account') }}">Mi cuenta</a>
-      <a class="{% if request.endpoint in ['clients_index','clients_new','clients_edit','client_detail'] %}active{% endif %}" href="{{ url_for('clients_index') }}">Clientes</a>
-      <a class="{% if request.endpoint in ['budgets_index','budgets_form','budget_detail'] %}active{% endif %}" href="{{ url_for('budgets_index') }}">Presupuestos</a>
-      <a class="{% if request.endpoint in ['projects_index','projects_form','project_detail'] %}active{% endif %}" href="{{ url_for('projects_index') }}">Proyectos</a>
-      <a class="{% if request.endpoint in ['services_index','services_form'] %}active{% endif %}" href="{{ url_for('services_index') }}">Servicios</a>
-      {% if current_user and current_user.role == 'admin' %}
+      {% if can('clients.view') %}
+        <a class="{% if request.endpoint in ['clients_index','clients_new','clients_edit','client_detail'] %}active{% endif %}" href="{{ url_for('clients_index') }}">Clientes</a>
+      {% endif %}
+      {% if can('budgets.view') %}
+        <a class="{% if request.endpoint in ['budgets_index','budgets_form','budget_detail'] %}active{% endif %}" href="{{ url_for('budgets_index') }}">Presupuestos</a>
+      {% endif %}
+      {% if can('projects.view') %}
+        <a class="{% if request.endpoint in ['projects_index','projects_form','project_detail'] %}active{% endif %}" href="{{ url_for('projects_index') }}">Proyectos</a>
+      {% endif %}
+      {% if can('services.view') %}
+        <a class="{% if request.endpoint in ['services_index','services_form'] %}active{% endif %}" href="{{ url_for('services_index') }}">Servicios</a>
+      {% endif %}
+      {% if can('users.view') %}
         <a class="{% if request.endpoint in ['users_index','users_new'] %}active{% endif %}" href="{{ url_for('users_index') }}">Usuarios</a>
+      {% endif %}
+      {% if can('settings.view') %}
         <a class="{% if request.endpoint in ['settings_page'] %}active{% endif %}" href="{{ url_for('settings_page') }}">Configuracion</a>
       {% endif %}
-      <a href="{{ url_for('clients_new') }}">Nuevo cliente</a>
-      <a href="{{ url_for('budgets_form') }}">Nuevo presupuesto</a>
-      <a href="{{ url_for('projects_form') }}">Nuevo proyecto</a>
-      {% if current_user and current_user.role == 'admin' %}
+      {% if can('clients.create') %}
+        <a href="{{ url_for('clients_new') }}">Nuevo cliente</a>
+      {% endif %}
+      {% if can('budgets.create') %}
+        <a href="{{ url_for('budgets_form') }}">Nuevo presupuesto</a>
+      {% endif %}
+      {% if can('projects.create') %}
+        <a href="{{ url_for('projects_form') }}">Nuevo proyecto</a>
+      {% endif %}
+      {% if can('backup.download') %}
         <a href="{{ url_for('download_backup') }}">Descargar backup</a>
       {% endif %}
       {% if current_user %}

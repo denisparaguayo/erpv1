@@ -1,6 +1,5 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 from datetime import date, datetime
-from functools import wraps
 from pathlib import Path
 import json
 import os
@@ -26,12 +25,12 @@ UPLOADS_ROOT = DATA_ROOT / 'uploads'
 BACKUPS_ROOT = DATA_ROOT / 'backups'
 SETTINGS_ROOT = DATA_ROOT / 'settings'
 ALLOWED_UPLOADS = {'.pdf', '.png', '.jpg', '.jpeg', '.docx', '.txt', '.xlsx', '.html', '.css', '.js', '.svg', '.webp'}
-FILE_CATEGORIES = ['Documento', 'Logo cliente', 'Material cliente', 'Contrato', 'Factura', 'Recibo', 'SEO', 'Comunicación', 'Entregable']
+FILE_CATEGORIES = ['Documento', 'Logo cliente', 'Material cliente', 'Contrato', 'Factura', 'Recibo', 'SEO', 'ComunicaciÃ³n', 'Entregable']
 
 DEFAULT_SETTINGS = {
     'agency_name': 'Mbarete Digital',
-    'agency_subtitle': 'Agencia de Diseño Web',
-    'agency_location': 'Asunción, Paraguay',
+    'agency_subtitle': 'Agencia de DiseÃ±o Web',
+    'agency_location': 'AsunciÃ³n, Paraguay',
     'agency_ruc': '',
     'agency_address': '',
     'agency_phone': '0986 550 235',
@@ -53,48 +52,143 @@ DEFAULT_SETTINGS = {
 }
 
 DEFAULT_SERVICES = [
-    ('Página web · Plan Básico', 'Páginas web', 'principal', 'Landing page con WhatsApp, SEO básico y mapa.', 800000),
-    ('Página web · Plan Estándar', 'Páginas web', 'principal', 'Sitio con varias secciones, formulario y SEO mejorado.', 1400000),
-    ('Página web · Plan Pro', 'Páginas web', 'principal', 'Sitio profesional con páginas internas y blog.', 3800000),
-    ('Diseño de logo', 'Branding', 'principal', 'Diseño de logo comercial.', 400000),
-    ('Fotografía de productos', 'Fotografía', 'principal', 'Sesión básica de productos para catálogo.', 650000),
+    ('PÃ¡gina web Â· Plan BÃ¡sico', 'PÃ¡ginas web', 'principal', 'Landing page con WhatsApp, SEO bÃ¡sico y mapa.', 800000),
+    ('PÃ¡gina web Â· Plan EstÃ¡ndar', 'PÃ¡ginas web', 'principal', 'Sitio con varias secciones, formulario y SEO mejorado.', 1400000),
+    ('PÃ¡gina web Â· Plan Pro', 'PÃ¡ginas web', 'principal', 'Sitio profesional con pÃ¡ginas internas y blog.', 3800000),
+    ('DiseÃ±o de logo', 'Branding', 'principal', 'DiseÃ±o de logo comercial.', 400000),
+    ('FotografÃ­a de productos', 'FotografÃ­a', 'principal', 'SesiÃ³n bÃ¡sica de productos para catÃ¡logo.', 650000),
     ('Proyecto personalizado', 'Otros', 'principal', 'Proyecto sin servicio principal fijo. Usar extras.', 0),
-    ('Catálogo digital / menú', 'Extras web', 'extra', 'Catálogo visual con pedido por WhatsApp.', 400000),
+    ('CatÃ¡logo digital / menÃº', 'Extras web', 'extra', 'CatÃ¡logo visual con pedido por WhatsApp.', 400000),
     ('Posicionamiento en Google (SEO Local)', 'SEO', 'extra', 'Trabajo mensual de SEO local.', 320000),
-    ('Manejo de redes sociales', 'Marketing', 'extra', 'Gestión mensual de publicaciones.', 450000),
+    ('Manejo de redes sociales', 'Marketing', 'extra', 'GestiÃ³n mensual de publicaciones.', 450000),
     ('Mantenimiento mensual', 'Mantenimiento', 'extra', 'Cambios y soporte mensual.', 170000),
     ('Email profesional', 'Hosting y dominio', 'extra', 'Correo corporativo anual.', 140000),
 ]
 DEFAULT_PAYMENT_METHODS = [
     ('Efectivo', 'Pago en efectivo', 1),
-    ('Transferencia bancaria', 'Transferencia o depósito', 2),
+    ('Transferencia bancaria', 'Transferencia o depÃ³sito', 2),
     ('Billetera digital', 'Personal / Tigo Money / QR', 3),
-    ('Tarjeta', 'Débito o crédito', 4),
+    ('Tarjeta', 'DÃ©bito o crÃ©dito', 4),
 ]
 DEFAULT_PAYMENT_CONDITIONS = [
     ('Contado', 'Pago completo', 1),
     ('50% anticipo / 50% entrega', 'Mitad al iniciar y mitad al entregar', 2),
     ('Mensual', 'Pago recurrente mensual', 3),
-    ('Personalizado', 'Condición negociada', 99),
+    ('Personalizado', 'CondiciÃ³n negociada', 99),
 ]
 
 PUBLIC_ENDPOINTS = {'login', 'forgot_password', 'health', 'static'}
-ADMIN_ENDPOINTS = {
-    'users_index',
-    'users_new',
-    'users_toggle',
-    'settings_page',
-    'settings_logo_delete',
-    'settings_general_save',
-    'payment_methods_add',
-    'payment_methods_toggle',
-    'payment_methods_delete',
-    'payment_conditions_add',
-    'payment_conditions_toggle',
-    'payment_conditions_delete',
-    'services_form',
-    'services_delete',
-    'download_backup',
+RBAC_ROLES = [
+    ('super_admin', 'Super Admin', 'Control total del sistema'),
+    ('gerencia', 'Gerencia', 'Control completo operativo y financiero'),
+    ('admin_operativo', 'Admin Operativo', 'Administracion diaria sin seguridad critica'),
+    ('vendedor', 'Vendedor', 'Gestion comercial y presupuestos'),
+    ('produccion', 'Produccion', 'Ejecucion y entrega de proyectos'),
+    ('cobranzas', 'Cobranzas', 'Cobros, comprobantes y renovaciones'),
+    ('solo_lectura', 'Solo Lectura', 'Consulta sin edicion'),
+]
+
+RBAC_PERMISSIONS = [
+    ('dashboard.view', 'dashboard', 'view', 'Ver dashboard'),
+    ('clients.view', 'clients', 'view', 'Ver clientes'),
+    ('clients.create', 'clients', 'create', 'Crear clientes'),
+    ('clients.edit', 'clients', 'edit', 'Editar clientes'),
+    ('clients.delete', 'clients', 'delete', 'Eliminar clientes'),
+    ('budgets.view', 'budgets', 'view', 'Ver presupuestos'),
+    ('budgets.create', 'budgets', 'create', 'Crear presupuestos'),
+    ('budgets.edit', 'budgets', 'edit', 'Editar presupuestos'),
+    ('budgets.delete', 'budgets', 'delete', 'Eliminar presupuestos'),
+    ('budgets.convert', 'budgets', 'convert', 'Convertir presupuesto a proyecto'),
+    ('projects.view', 'projects', 'view', 'Ver proyectos'),
+    ('projects.create', 'projects', 'create', 'Crear proyectos'),
+    ('projects.edit', 'projects', 'edit', 'Editar proyectos'),
+    ('projects.delete', 'projects', 'delete', 'Eliminar proyectos'),
+    ('projects.files.upload', 'projects', 'upload', 'Subir archivos de proyecto'),
+    ('projects.versions.upload', 'projects', 'upload', 'Subir versiones HTML'),
+    ('projects.folder.open', 'projects', 'open', 'Abrir carpeta del proyecto'),
+    ('payments.create', 'payments', 'create', 'Registrar comprobantes'),
+    ('payments.status.update', 'payments', 'edit', 'Actualizar estado de pago'),
+    ('payments.pdf.view', 'payments', 'view', 'Ver/descargar PDF de comprobante'),
+    ('renewals.create', 'renewals', 'create', 'Registrar renovaciones'),
+    ('services.view', 'services', 'view', 'Ver catalogo de servicios'),
+    ('services.manage', 'services', 'manage', 'Gestionar catalogo de servicios'),
+    ('settings.view', 'settings', 'view', 'Ver configuraciones'),
+    ('settings.manage', 'settings', 'manage', 'Gestionar configuraciones'),
+    ('users.view', 'users', 'view', 'Ver usuarios'),
+    ('users.manage', 'users', 'manage', 'Gestionar usuarios y roles'),
+    ('backup.download', 'backup', 'download', 'Descargar backup'),
+    ('files.download', 'files', 'download', 'Descargar archivos'),
+    ('account.self.manage', 'account', 'manage', 'Gestionar cuenta propia'),
+]
+
+ROLE_PERMISSION_CODES = {
+    'super_admin': {code for code, *_ in RBAC_PERMISSIONS},
+    'gerencia': {code for code, *_ in RBAC_PERMISSIONS if code != 'users.manage'},
+    'admin_operativo': {
+        'dashboard.view', 'clients.view', 'clients.create', 'clients.edit',
+        'budgets.view', 'budgets.create', 'budgets.edit', 'budgets.convert',
+        'projects.view', 'projects.create', 'projects.edit', 'projects.files.upload',
+        'projects.versions.upload', 'projects.folder.open',
+        'payments.create', 'payments.status.update', 'payments.pdf.view',
+        'renewals.create', 'services.view', 'account.self.manage', 'files.download',
+    },
+    'vendedor': {
+        'dashboard.view', 'clients.view', 'clients.create', 'clients.edit',
+        'budgets.view', 'budgets.create', 'budgets.edit', 'budgets.convert',
+        'projects.view', 'account.self.manage',
+    },
+    'produccion': {
+        'dashboard.view', 'projects.view', 'projects.edit', 'projects.files.upload',
+        'projects.versions.upload', 'projects.folder.open', 'files.download', 'account.self.manage',
+    },
+    'cobranzas': {
+        'dashboard.view', 'clients.view', 'projects.view', 'payments.create',
+        'payments.status.update', 'payments.pdf.view', 'renewals.create', 'account.self.manage',
+    },
+    'solo_lectura': {
+        'dashboard.view', 'clients.view', 'budgets.view', 'projects.view',
+        'services.view', 'payments.pdf.view', 'files.download', 'account.self.manage',
+    },
+}
+
+ENDPOINT_PERMISSIONS = {
+    'dashboard': ['dashboard.view'],
+    'account': ['account.self.manage'],
+    'users_index': ['users.view'],
+    'users_new': ['users.manage'],
+    'users_toggle': ['users.manage'],
+    'settings_page': ['settings.view'],
+    'settings_logo_delete': ['settings.manage'],
+    'settings_general_save': ['settings.manage'],
+    'payment_methods_add': ['settings.manage'],
+    'payment_methods_toggle': ['settings.manage'],
+    'payment_methods_delete': ['settings.manage'],
+    'payment_conditions_add': ['settings.manage'],
+    'payment_conditions_toggle': ['settings.manage'],
+    'payment_conditions_delete': ['settings.manage'],
+    'services_index': ['services.view'],
+    'services_delete': ['services.manage'],
+    'clients_index': ['clients.view'],
+    'clients_new': ['clients.create'],
+    'clients_edit': ['clients.edit'],
+    'clients_delete': ['clients.delete'],
+    'client_detail': ['clients.view'],
+    'budgets_index': ['budgets.view'],
+    'budget_detail': ['budgets.view'],
+    'budgets_delete': ['budgets.delete'],
+    'budget_convert': ['budgets.convert'],
+    'projects_index': ['projects.view'],
+    'projects_delete': ['projects.delete'],
+    'project_detail': ['projects.view'],
+    'open_project_folder': ['projects.folder.open'],
+    'add_payment': ['payments.create'],
+    'payment_pdf': ['payments.pdf.view'],
+    'payment_status_update': ['payments.status.update'],
+    'add_version': ['projects.versions.upload'],
+    'add_file': ['projects.files.upload'],
+    'add_renewal': ['renewals.create'],
+    'download_file': ['files.download'],
+    'download_backup': ['backup.download'],
 }
 
 
@@ -124,6 +218,8 @@ def create_app() -> Flask:
             'app_version': APP_VERSION,
             'settings': get_settings(db),
             'current_user': getattr(g, 'current_user', None),
+            'current_permissions': getattr(g, 'current_permissions', set()),
+            'can': lambda permission_code: permission_code in getattr(g, 'current_permissions', set()),
         }
 
     @app.before_request
@@ -133,6 +229,7 @@ def create_app() -> Flask:
             ensure_defaults()
             g._db_ready = True
         g.current_user = current_user()
+        g.current_permissions = set()
         endpoint = request.endpoint or ''
         if not endpoint:
             return
@@ -140,9 +237,13 @@ def create_app() -> Flask:
             return
         if not g.current_user:
             return redirect(url_for('login', next=request.path))
-        if endpoint in ADMIN_ENDPOINTS and g.current_user['role'] != 'admin':
-            flash('Solo el administrador puede realizar esa acción.', 'error')
-            return redirect(url_for('dashboard'))
+        g.current_permissions = get_user_permissions(get_db(), g.current_user['id'])
+        required_permissions = required_permissions_for_request(endpoint)
+        if required_permissions and not has_all_permissions(g.current_permissions, required_permissions):
+            flash('No tenes permisos para esta accion.', 'error')
+            if endpoint != 'dashboard' and 'dashboard.view' in g.current_permissions:
+                return redirect(url_for('dashboard'))
+            return ('Permiso denegado', 403)
 
     @app.route('/login', methods=['GET', 'POST'])
     def login():
@@ -159,7 +260,7 @@ def create_app() -> Flask:
                 if not next_path.startswith('/'):
                     next_path = url_for('dashboard')
                 return redirect(next_path)
-            flash('Credenciales inválidas.', 'error')
+            flash('Credenciales invÃ¡lidas.', 'error')
         return render_template('login.html')
 
     @app.post('/logout')
@@ -216,40 +317,43 @@ def create_app() -> Flask:
         return render_template('account.html')
 
     @app.get('/users')
-    @admin_required
     def users_index():
         db = get_db()
-        users = db.execute('SELECT id, email, role, active, created_at, last_login_at FROM users ORDER BY id').fetchall()
+        users = [dict(row) for row in db.execute('SELECT id, email, role, active, created_at, last_login_at FROM users ORDER BY id').fetchall()]
+        for user in users:
+            user['roles'] = get_user_roles(db, user['id'])
         return render_template('users.html', users=users)
 
     @app.route('/users/new', methods=['GET', 'POST'])
-    @admin_required
     def users_new():
+        db = get_db()
+        roles = db.execute('SELECT id, code, name FROM roles WHERE active = 1 ORDER BY id').fetchall()
         if request.method == 'POST':
-            db = get_db()
             email = (request.form.get('email') or '').strip().lower()
             password = request.form.get('password') or ''
-            role = (request.form.get('role') or 'user').strip().lower()
-            if role not in {'admin', 'user'}:
-                role = 'user'
+            role_code = (request.form.get('role_code') or 'vendedor').strip().lower()
+            valid_codes = {r['code'] for r in roles}
+            if role_code not in valid_codes:
+                role_code = 'vendedor'
             if not email or not password:
-                flash('Email y contraseña son obligatorios.', 'error')
-                return render_template('user_form.html')
+                flash('Email y contraseÃ±a son obligatorios.', 'error')
+                return render_template('user_form.html', roles=roles)
             exists = db.execute('SELECT id FROM users WHERE email = ?', (email,)).fetchone()
             if exists:
                 flash('Ese email ya existe.', 'error')
-                return render_template('user_form.html')
-            db.execute(
+                return render_template('user_form.html', roles=roles)
+            cur = db.execute(
                 'INSERT INTO users (email, password_hash, role, active) VALUES (?, ?, ?, 1)',
-                (email, generate_password_hash(password), role),
+                (email, generate_password_hash(password), role_code),
             )
+            user_id = cur.lastrowid
+            assign_role_to_user(db, user_id, role_code, g.current_user['id'])
             db.commit()
             flash('Usuario creado correctamente.', 'success')
             return redirect(url_for('users_index'))
-        return render_template('user_form.html')
+        return render_template('user_form.html', roles=roles)
 
     @app.post('/users/<int:user_id>/toggle')
-    @admin_required
     def users_toggle(user_id: int):
         db = get_db()
         user = db.execute('SELECT id, active, role FROM users WHERE id = ?', (user_id,)).fetchone()
@@ -257,7 +361,7 @@ def create_app() -> Flask:
             flash('Usuario no encontrado.', 'error')
             return redirect(url_for('users_index'))
         if user_id == g.current_user['id']:
-            flash('No podés desactivar tu propio usuario.', 'error')
+            flash('No podÃ©s desactivar tu propio usuario.', 'error')
             return redirect(url_for('users_index'))
         db.execute('UPDATE users SET active = ? WHERE id = ?', (0 if user['active'] else 1, user_id))
         db.commit()
@@ -328,7 +432,7 @@ def create_app() -> Flask:
     @app.get('/backup/download')
     def download_backup():
         if db_backend() == 'postgres':
-            flash('Para PostgreSQL usá backup con pg_dump en el servidor.', 'error')
+            flash('Para PostgreSQL usÃ¡ backup con pg_dump en el servidor.', 'error')
             return redirect(url_for('settings_page'))
         db_path = Path(app.instance_path) / 'mbarete_erp.sqlite3'
         backup_name = f"mbarete_backup_manual_{datetime.now().strftime('%Y%m%d_%H%M%S')}.sqlite3"
@@ -375,7 +479,7 @@ def create_app() -> Flask:
                 file.save(target)
                 set_setting(db, 'logo_path', str(target))
         db.commit()
-        flash('Configuración general actualizada.', 'success')
+        flash('ConfiguraciÃ³n general actualizada.', 'success')
         return redirect(url_for('settings_page'))
 
     @app.post('/settings/payment-methods')
@@ -612,7 +716,7 @@ def create_app() -> Flask:
             save_project_items(db, scope_id, payload['items'])
             create_master_note(folder_path, client, payload)
             create_domain_hosting_note(folder_path, client, payload)
-            log_activity(db, payload['client_id'], scope_id, 'Proyecto guardado', f"{payload['plan']} · estado {payload['status']}")
+            log_activity(db, payload['client_id'], scope_id, 'Proyecto guardado', f"{payload['plan']} Â· estado {payload['status']}")
             db.commit(); flash('Proyecto guardado correctamente.', 'success')
             return redirect(url_for('project_detail', project_id=scope_id))
         return render_template('project_form.html', clients=clients, project=project, services=services, conditions=conditions, project_items=project_items)
@@ -651,9 +755,9 @@ def create_app() -> Flask:
                 subprocess.Popen(['xdg-open', str(folder_path)])
             else:
                 raise RuntimeError('No se pudo detectar un abridor de carpetas.')
-            flash('Se intentó abrir la carpeta del proyecto.', 'success')
+            flash('Se intentÃ³ abrir la carpeta del proyecto.', 'success')
         except Exception:
-            flash(f'No se pudo abrir automáticamente. Ruta: {folder_path}', 'error')
+            flash(f'No se pudo abrir automÃ¡ticamente. Ruta: {folder_path}', 'error')
         return redirect(url_for('project_detail', project_id=project_id))
 
     @app.post('/projects/<int:project_id>/payments')
@@ -661,7 +765,7 @@ def create_app() -> Flask:
         db = get_db(); project = db.execute('SELECT * FROM projects WHERE id = ?', (project_id,)).fetchone(); client = db.execute('SELECT * FROM clients WHERE id = ?', (project['client_id'],)).fetchone(); settings = get_settings(db)
         items = parse_invoice_items(request, db)
         if not items:
-            flash('Agregá al menos un ítem en la factura/recibo.', 'error'); return redirect(url_for('project_detail', project_id=project_id))
+            flash('AgregÃ¡ al menos un Ã­tem en la factura/recibo.', 'error'); return redirect(url_for('project_detail', project_id=project_id))
         vat_percent = int(settings.get('vat_percent') or 10)
         selected_currency = (request.form.get('currency_code') or settings.get('currency_code') or 'PYG').upper()
         exchange_rate = float(request.form.get('exchange_rate') or settings.get('usd_exchange_rate') or 1)
@@ -709,7 +813,7 @@ def create_app() -> Flask:
         company_info['usd_exchange_rate'] = payment_row['exchange_rate'] if payment_row['exchange_rate'] else company_info.get('usd_exchange_rate', '7800')
         create_invoice_pdf(pdf_path, company_info, dict(client), dict(project), dict(payment_row), items, title=doc_type.upper())
         db.execute('UPDATE payments SET pdf_path = ? WHERE id = ?', (str(pdf_path), payment_id))
-        log_activity(db, project['client_id'], project_id, f"{doc_type.title()} generada", f"{doc_type.title()} N° {document_number} creada en estado {payment['status']} por {money_display(total, selected_currency, exchange_rate)}")
+        log_activity(db, project['client_id'], project_id, f"{doc_type.title()} generada", f"{doc_type.title()} NÂ° {document_number} creada en estado {payment['status']} por {money_display(total, selected_currency, exchange_rate)}")
         increment_document_counter(db, doc_type); db.commit(); flash(f'{doc_type.title()} registrada y PDF generado.', 'success')
         return redirect(url_for('project_detail', project_id=project_id))
 
@@ -722,7 +826,7 @@ def create_app() -> Flask:
         db = get_db()
         payment = db.execute('SELECT * FROM payments WHERE id = ?', (payment_id,)).fetchone()
         if not payment:
-            flash('No se encontró el comprobante.', 'error')
+            flash('No se encontrÃ³ el comprobante.', 'error')
             return redirect(url_for('dashboard'))
         project = db.execute('SELECT * FROM projects WHERE id = ?', (payment['project_id'],)).fetchone()
         new_status = (request.form.get('status') or 'Pendiente').strip() or 'Pendiente'
@@ -732,7 +836,7 @@ def create_app() -> Flask:
         if new_status != 'Pagado':
             paid_date = ''
         db.execute('UPDATE payments SET status = ?, paid_date = ? WHERE id = ?', (new_status, paid_date, payment_id))
-        log_activity(db, project['client_id'] if project else None, payment['project_id'], 'Estado de pago actualizado', f"Comprobante {payment['document_number']} → {new_status}{' (' + paid_date + ')' if paid_date else ''}")
+        log_activity(db, project['client_id'] if project else None, payment['project_id'], 'Estado de pago actualizado', f"Comprobante {payment['document_number']} â†’ {new_status}{' (' + paid_date + ')' if paid_date else ''}")
         db.commit()
         flash(f'Comprobante marcado como {new_status}.', 'success')
         return redirect(url_for('project_detail', project_id=payment['project_id']))
@@ -740,7 +844,7 @@ def create_app() -> Flask:
     @app.post('/projects/<int:project_id>/versions')
     def add_version(project_id: int):
         db = get_db(); project = db.execute('SELECT * FROM projects WHERE id = ?', (project_id,)).fetchone(); file = request.files.get('html_file')
-        if not file or not file.filename: flash('Seleccioná un archivo HTML.', 'error'); return redirect(url_for('project_detail', project_id=project_id))
+        if not file or not file.filename: flash('SeleccionÃ¡ un archivo HTML.', 'error'); return redirect(url_for('project_detail', project_id=project_id))
         ext = Path(file.filename).suffix.lower();
         if ext != '.html': flash('Solo se admiten archivos .html.', 'error'); return redirect(url_for('project_detail', project_id=project_id))
         max_version = scalar(db, 'SELECT COALESCE(MAX(version_number), 0) FROM html_versions WHERE project_id = ?', (project_id,)); version_number = int(max_version) + 1
@@ -748,12 +852,12 @@ def create_app() -> Flask:
         stored_name = ensure_unique_filename(target_folder, f"site_v{version_number}_{sanitize_name(project['code'] or 'proyecto')}.html"); target_path = target_folder / stored_name; file.save(target_path)
         if request.form.get('is_final') == '1': db.execute('UPDATE html_versions SET is_final = 0 WHERE project_id = ?', (project_id,))
         db.execute('''INSERT INTO html_versions (project_id, version_number, original_name, stored_name, relative_path, is_final, published_url, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?)''', (project_id, version_number, file.filename, stored_name, str(target_path), 1 if request.form.get('is_final') == '1' else 0, request.form.get('published_url', '').strip(), request.form.get('notes', '').strip()))
-        db.commit(); flash('Versión HTML guardada.', 'success'); return redirect(url_for('project_detail', project_id=project_id))
+        db.commit(); flash('VersiÃ³n HTML guardada.', 'success'); return redirect(url_for('project_detail', project_id=project_id))
 
     @app.post('/projects/<int:project_id>/files')
     def add_file(project_id: int):
         db = get_db(); project = db.execute('SELECT * FROM projects WHERE id = ?', (project_id,)).fetchone(); file = request.files.get('project_file')
-        if not file or not file.filename: flash('Seleccioná un archivo.', 'error'); return redirect(url_for('project_detail', project_id=project_id))
+        if not file or not file.filename: flash('SeleccionÃ¡ un archivo.', 'error'); return redirect(url_for('project_detail', project_id=project_id))
         ext = Path(file.filename).suffix.lower();
         if ext not in ALLOWED_UPLOADS: flash('Tipo de archivo no permitido.', 'error'); return redirect(url_for('project_detail', project_id=project_id))
         category = request.form.get('category', 'Documento').strip() or 'Documento'; purpose = request.form.get('purpose', '').strip() or category
@@ -766,7 +870,7 @@ def create_app() -> Flask:
     def add_renewal(project_id: int):
         db = get_db(); project = db.execute('SELECT * FROM projects WHERE id = ?', (project_id,)).fetchone();
         db.execute('''INSERT INTO renewals (project_id, renewal_type, amount, due_date, status, notes) VALUES (?, ?, ?, ?, ?, ?)''', (project_id, request.form['renewal_type'].strip(), int(request.form.get('amount') or 0), request.form['due_date'], request.form.get('status', 'Pendiente').strip(), request.form.get('notes', '').strip()))
-        db.commit(); flash('Renovación registrada.', 'success'); return redirect(url_for('project_detail', project_id=project_id))
+        db.commit(); flash('RenovaciÃ³n registrada.', 'success'); return redirect(url_for('project_detail', project_id=project_id))
 
     @app.get('/download')
     def download_file():
@@ -825,17 +929,105 @@ def current_user():
     ).fetchone()
 
 
-def admin_required(view):
-    @wraps(view)
-    def wrapped(*args, **kwargs):
-        user = getattr(g, 'current_user', None)
-        if not user:
-            return redirect(url_for('login'))
-        if user['role'] != 'admin':
-            flash('Acceso restringido a administradores.', 'error')
-            return redirect(url_for('dashboard'))
-        return view(*args, **kwargs)
-    return wrapped
+def required_permissions_for_request(endpoint: str) -> list[str]:
+    if endpoint == 'services_form':
+        return ['services.manage']
+    if endpoint == 'budgets_form':
+        budget_id = (request.view_args or {}).get('budget_id')
+        return ['budgets.edit'] if budget_id is not None else ['budgets.create']
+    if endpoint == 'projects_form':
+        project_id = (request.view_args or {}).get('project_id')
+        return ['projects.edit'] if project_id is not None else ['projects.create']
+    return ENDPOINT_PERMISSIONS.get(endpoint, [])
+
+
+def has_all_permissions(granted: set[str], required: list[str]) -> bool:
+    return all(code in granted for code in required)
+
+
+def get_user_permissions(db, user_id: int) -> set[str]:
+    rows = db.execute(
+        '''
+        SELECT DISTINCT p.code
+        FROM user_roles ur
+        JOIN roles r ON r.id = ur.role_id AND r.active = 1
+        JOIN role_permissions rp ON rp.role_id = r.id
+        JOIN permissions p ON p.id = rp.permission_id
+        WHERE ur.user_id = ?
+        ''',
+        (user_id,),
+    ).fetchall()
+    return {row['code'] for row in rows}
+
+
+def get_user_roles(db, user_id: int) -> list[str]:
+    rows = db.execute(
+        '''
+        SELECT r.code
+        FROM user_roles ur
+        JOIN roles r ON r.id = ur.role_id
+        WHERE ur.user_id = ?
+        ORDER BY r.id
+        ''',
+        (user_id,),
+    ).fetchall()
+    return [row['code'] for row in rows]
+
+
+def assign_role_to_user(db, user_id: int, role_code: str, assigned_by: int | None = None) -> None:
+    role = db.execute('SELECT id FROM roles WHERE code = ?', (role_code,)).fetchone()
+    if not role:
+        return
+    db.execute('DELETE FROM user_roles WHERE user_id = ?', (user_id,))
+    db.execute('INSERT INTO user_roles (user_id, role_id, assigned_by) VALUES (?, ?, ?)', (user_id, role['id'], assigned_by))
+
+
+def seed_rbac(db) -> None:
+    for code, name, description in RBAC_ROLES:
+        db.execute(
+            'INSERT INTO roles (code, name, description, active) VALUES (?, ?, ?, 1) '
+            'ON CONFLICT(code) DO UPDATE SET name = excluded.name, description = excluded.description',
+            (code, name, description),
+        )
+    for code, module, action, description in RBAC_PERMISSIONS:
+        db.execute(
+            'INSERT INTO permissions (code, module, action, description) VALUES (?, ?, ?, ?) '
+            'ON CONFLICT(code) DO UPDATE SET module = excluded.module, action = excluded.action, description = excluded.description',
+            (code, module, action, description),
+        )
+
+    role_rows = db.execute('SELECT id, code FROM roles').fetchall()
+    perm_rows = db.execute('SELECT id, code FROM permissions').fetchall()
+    role_id_by_code = {row['code']: row['id'] for row in role_rows}
+    perm_id_by_code = {row['code']: row['id'] for row in perm_rows}
+
+    for role_code, perm_codes in ROLE_PERMISSION_CODES.items():
+        role_id = role_id_by_code.get(role_code)
+        if not role_id:
+            continue
+        for permission_code in perm_codes:
+            permission_id = perm_id_by_code.get(permission_code)
+            if not permission_id:
+                continue
+            db.execute(
+                'INSERT INTO role_permissions (role_id, permission_id) VALUES (?, ?) ON CONFLICT(role_id, permission_id) DO NOTHING',
+                (role_id, permission_id),
+            )
+
+    user_rows = db.execute('SELECT id, role FROM users').fetchall()
+    for user in user_rows:
+        assigned = scalar(db, 'SELECT COUNT(*) FROM user_roles WHERE user_id = ?', (user['id'],))
+        if assigned:
+            continue
+        legacy_role = (user['role'] or '').strip().lower()
+        if legacy_role == 'admin':
+            role_code = 'super_admin'
+        elif legacy_role in ROLE_PERMISSION_CODES:
+            role_code = legacy_role
+        else:
+            role_code = 'vendedor'
+        assign_role_to_user(db, user['id'], role_code)
+        db.execute('UPDATE users SET role = ? WHERE id = ?', (role_code, user['id']))
 
 
 def ensure_admin_user(db) -> None:
@@ -844,10 +1036,11 @@ def ensure_admin_user(db) -> None:
         return
     admin_email = os.environ.get('MBARETE_ADMIN_EMAIL', 'admin@mbarete.local').strip().lower()
     admin_password = os.environ.get('MBARETE_ADMIN_PASSWORD', 'admin123')
-    db.execute(
+    cur = db.execute(
         'INSERT INTO users (email, password_hash, role, active) VALUES (?, ?, ?, 1)',
-        (admin_email, generate_password_hash(admin_password), 'admin'),
+        (admin_email, generate_password_hash(admin_password), 'super_admin'),
     )
+    assign_role_to_user(db, cur.lastrowid, 'super_admin')
 
 
 def parse_client_form(req) -> dict:
@@ -965,7 +1158,7 @@ def parse_invoice_items(req, db) -> list[dict]:
                 desc = row['name']; unit_price = unit_price or int(row['base_price'] or 0)
         if not desc and unit_price == 0: continue
         qty = max(qty, 1)
-        items.append({'item_type': item_type, 'service_id': service_id, 'description': desc or 'Ítem', 'quantity': qty, 'unit_price': unit_price, 'total': qty * unit_price})
+        items.append({'item_type': item_type, 'service_id': service_id, 'description': desc or 'Ãtem', 'quantity': qty, 'unit_price': unit_price, 'total': qty * unit_price})
     return items
 
 
@@ -978,7 +1171,7 @@ def category_to_subfolder(category: str) -> str:
     return {
         'Documento': '01_Documentos', 'Logo cliente': '02_Materiales_del_Cliente', 'Material cliente': '02_Materiales_del_Cliente',
         'Contrato': '01_Documentos', 'Factura': '01_Documentos', 'Recibo': '01_Documentos', 'SEO': '05_SEO_y_Analytics',
-        'Comunicación': '06_Comunicaciones', 'Entregable': '07_Entregables_Finales',
+        'ComunicaciÃ³n': '06_Comunicaciones', 'Entregable': '07_Entregables_Finales',
     }.get(category, '01_Documentos')
 
 
@@ -990,12 +1183,12 @@ def ensure_unique_filename(folder: Path, filename: str) -> str:
 
 
 def create_master_note(folder_path: Path, client, project_data: dict) -> None:
-    content = f"""MBARETE DIGITAL · FICHA MAESTRA\n\nNombre del negocio: {client['business_name']}\nRubro: {client['category'] or ''}\nDueño: {client['owner_name'] or ''}\nWhatsApp: {client['whatsapp'] or ''}\nEmail: {client['email'] or ''}\nDirección: {client['address'] or ''}\nCiudad: {client['city'] or ''}\nRUC/CI: {client['ruc_ci'] or ''}\n\nServicio principal: {project_data['plan']}\nExtras: {project_data['extras']}\nMonto total: {project_data['total_amount']}\nFecha inicio: {project_data.get('start_date','')}\nFecha entrega acordada: {project_data.get('due_date','') or ''}\nDominio: {project_data.get('domain_name','')}\nHosting: {project_data.get('hosting_provider','')}\nEstado: {project_data['status']}\n"""
+    content = f"""MBARETE DIGITAL Â· FICHA MAESTRA\n\nNombre del negocio: {client['business_name']}\nRubro: {client['category'] or ''}\nDueÃ±o: {client['owner_name'] or ''}\nWhatsApp: {client['whatsapp'] or ''}\nEmail: {client['email'] or ''}\nDirecciÃ³n: {client['address'] or ''}\nCiudad: {client['city'] or ''}\nRUC/CI: {client['ruc_ci'] or ''}\n\nServicio principal: {project_data['plan']}\nExtras: {project_data['extras']}\nMonto total: {project_data['total_amount']}\nFecha inicio: {project_data.get('start_date','')}\nFecha entrega acordada: {project_data.get('due_date','') or ''}\nDominio: {project_data.get('domain_name','')}\nHosting: {project_data.get('hosting_provider','')}\nEstado: {project_data['status']}\n"""
     (Path(folder_path) / '00_FICHA_MAESTRA.txt').write_text(content, encoding='utf-8')
 
 
 def create_domain_hosting_note(folder_path: Path, client, project_data: dict) -> None:
-    content = f"""DATOS DE DOMINIO Y HOSTING\n\nCliente: {client['business_name']}\nProyecto iniciado: {project_data.get('start_date','')}\n\nCliente ya tiene dominio: {'Sí' if project_data.get('client_has_domain') else 'No'}\nDominio: {project_data.get('domain_name') or '-'}\nProveedor dominio: {project_data.get('domain_provider') or '-'}\nEstado dominio: {project_data.get('domain_status') or '-'}\nUsuario dominio: {project_data.get('domain_user') or '-'}\nContraseña dominio: {project_data.get('domain_password') or '-'}\nVencimiento dominio: {project_data.get('domain_expiry') or '-'}\n\nHosting externo: {'Sí' if project_data.get('external_hosting') else 'No'}\nProveedor hosting: {project_data.get('hosting_provider') or '-'}\nEstado hosting: {project_data.get('hosting_status') or '-'}\nUsuario hosting: {project_data.get('hosting_user') or '-'}\nContraseña hosting: {project_data.get('hosting_password') or '-'}\nVencimiento hosting: {project_data.get('hosting_expiry') or '-'}\n\nNotas generales: {project_data.get('notes') or '-'}\nNotas técnicas: {project_data.get('technical_notes') or '-'}\n"""
+    content = f"""DATOS DE DOMINIO Y HOSTING\n\nCliente: {client['business_name']}\nProyecto iniciado: {project_data.get('start_date','')}\n\nCliente ya tiene dominio: {'SÃ­' if project_data.get('client_has_domain') else 'No'}\nDominio: {project_data.get('domain_name') or '-'}\nProveedor dominio: {project_data.get('domain_provider') or '-'}\nEstado dominio: {project_data.get('domain_status') or '-'}\nUsuario dominio: {project_data.get('domain_user') or '-'}\nContraseÃ±a dominio: {project_data.get('domain_password') or '-'}\nVencimiento dominio: {project_data.get('domain_expiry') or '-'}\n\nHosting externo: {'SÃ­' if project_data.get('external_hosting') else 'No'}\nProveedor hosting: {project_data.get('hosting_provider') or '-'}\nEstado hosting: {project_data.get('hosting_status') or '-'}\nUsuario hosting: {project_data.get('hosting_user') or '-'}\nContraseÃ±a hosting: {project_data.get('hosting_password') or '-'}\nVencimiento hosting: {project_data.get('hosting_expiry') or '-'}\n\nNotas generales: {project_data.get('notes') or '-'}\nNotas tÃ©cnicas: {project_data.get('technical_notes') or '-'}\n"""
     (Path(folder_path) / '04_Dominio_y_Hosting' / 'DATOS_DOMINIO_HOSTING.txt').write_text(content, encoding='utf-8')
 
 
@@ -1010,6 +1203,7 @@ def ensure_defaults() -> None:
     if scalar(db, 'SELECT COUNT(*) FROM payment_conditions') == 0:
         db.executemany('INSERT INTO payment_conditions (name, description, sort_order, active) VALUES (?, ?, ?, 1)', DEFAULT_PAYMENT_CONDITIONS)
     ensure_admin_user(db)
+    seed_rbac(db)
     db.commit()
 
 
@@ -1024,7 +1218,7 @@ def set_setting(db, key: str, value: str) -> None:
 
 
 def get_company_info(settings: dict) -> dict:
-    return {'name': settings.get('agency_name','Mbarete Digital'), 'subtitle': settings.get('agency_subtitle','Agencia de Diseño Web'), 'location': settings.get('agency_location','Asunción, Paraguay'), 'ruc': settings.get('agency_ruc',''), 'address': settings.get('agency_address',''), 'phone': settings.get('agency_phone',''), 'email': settings.get('agency_email',''), 'website': settings.get('agency_website',''), 'logo_path': settings.get('logo_path',''), 'show_logo_on_invoice': settings.get('show_logo_on_invoice','1'), 'footer_note': settings.get('invoice_default_notes',''), 'currency_code': settings.get('currency_code','PYG'), 'usd_exchange_rate': settings.get('usd_exchange_rate','7800')}
+    return {'name': settings.get('agency_name','Mbarete Digital'), 'subtitle': settings.get('agency_subtitle','Agencia de DiseÃ±o Web'), 'location': settings.get('agency_location','AsunciÃ³n, Paraguay'), 'ruc': settings.get('agency_ruc',''), 'address': settings.get('agency_address',''), 'phone': settings.get('agency_phone',''), 'email': settings.get('agency_email',''), 'website': settings.get('agency_website',''), 'logo_path': settings.get('logo_path',''), 'show_logo_on_invoice': settings.get('show_logo_on_invoice','1'), 'footer_note': settings.get('invoice_default_notes',''), 'currency_code': settings.get('currency_code','PYG'), 'usd_exchange_rate': settings.get('usd_exchange_rate','7800')}
 
 
 def get_app_meta(db) -> dict:
@@ -1092,3 +1286,5 @@ if __name__ == '__main__':
             threading.Timer(1.0, _open_browser).start()
 
     app.run(host=host, port=port, debug=debug_mode)
+
+

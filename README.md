@@ -5,7 +5,7 @@ Esta version soporta SQLite y PostgreSQL, con login de usuarios y rol admin.
 ## Cambios clave
 
 - Login obligatorio para usar el ERP.
-- Roles `admin` y `user`.
+- RBAC por roles y permisos (`super_admin`, `gerencia`, `admin_operativo`, `vendedor`, `produccion`, `cobranzas`, `solo_lectura`).
 - Compatibilidad de conexion por `DATABASE_URL`.
 - Si `DATABASE_URL` no existe, sigue usando SQLite.
 - Script de migracion SQLite -> PostgreSQL.
@@ -60,6 +60,7 @@ python scripts/migrate_sqlite_to_postgres.py
 
 - Si queres usar tu correo propio como admin, entra con el admin actual y ve a `Mi cuenta`.
 - "Olvide mi contrasena" funciona solo si definis `MBARETE_PASSWORD_RESET_KEY`.
+- Usuarios legacy con `role=admin` se migran automaticamente a `super_admin`.
 
 ## Desarrollo local
 

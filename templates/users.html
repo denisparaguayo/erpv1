@@ -25,7 +25,7 @@
       <tr>
         <td>{{ u.id }}</td>
         <td>{{ u.email }}</td>
-        <td>{{ u.role }}</td>
+        <td>{{ ', '.join(u.roles) if u.roles else u.role }}</td>
         <td>{{ 'Si' if u.active else 'No' }}</td>
         <td>{{ u.last_login_at or '-' }}</td>
         <td>

@@ -10,6 +10,10 @@ from psycopg.rows import dict_row
 TABLES = [
     'app_meta',
     'users',
+    'roles',
+    'permissions',
+    'role_permissions',
+    'user_roles',
     'settings',
     'payment_methods',
     'payment_conditions',
