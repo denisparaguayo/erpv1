@@ -378,52 +378,87 @@ def create_app() -> Flask:
     @app.get('/')
     def dashboard():
         db = get_db()
+        perms = getattr(g, 'current_permissions', set())
+        can_clients = 'clients.view' in perms
+        can_projects = 'projects.view' in perms
+        can_services = 'services.view' in perms
+        can_renewals = 'renewals.create' in perms
+        can_billing = 'payments.create' in perms or 'payments.status.update' in perms
+
         stats = {
-            'clients': scalar(db, 'SELECT COUNT(*) FROM clients'),
-            'projects': scalar(db, "SELECT COUNT(*) FROM projects WHERE status NOT IN ('Entregado','Inactivo')"),
-            'payments': scalar(db, 'SELECT COUNT(*) FROM payments'),
-            'services': scalar(db, 'SELECT COUNT(*) FROM service_catalog WHERE active = 1'),
-            'renewals_due': scalar(db, "SELECT COUNT(*) FROM renewals WHERE status = 'Pendiente'"),
-            'income_month': scalar(
+            'clients': 0,
+            'projects': 0,
+            'payments': 0,
+            'services': 0,
+            'renewals_due': 0,
+            'income_month': 0,
+        }
+        if can_clients:
+            stats['clients'] = scalar(db, 'SELECT COUNT(*) FROM clients')
+        if can_projects:
+            stats['projects'] = scalar(db, "SELECT COUNT(*) FROM projects WHERE status NOT IN ('Entregado','Inactivo')")
+        if can_billing:
+            stats['payments'] = scalar(db, 'SELECT COUNT(*) FROM payments')
+            stats['income_month'] = scalar(
                 db,
                 "SELECT COALESCE(SUM(total),0) FROM payments WHERE status = 'Pagado' "
                 "AND SUBSTRING(COALESCE(paid_date, issue_date), 1, 7)=?",
                 (date.today().strftime('%Y-%m'),),
-            ),
-        }
-        urgent_projects = db.execute('''
-            SELECT p.*, c.business_name
-            FROM projects p JOIN clients c ON c.id = p.client_id
-            WHERE p.status NOT IN ('Entregado','Inactivo')
-            ORDER BY COALESCE(p.due_date,'9999-99-99') ASC LIMIT 8
-        ''').fetchall()
-        pending_payments = db.execute('''
-            SELECT p.*, c.business_name
-            FROM payments p JOIN projects pr ON pr.id = p.project_id JOIN clients c ON c.id = pr.client_id
-            WHERE p.status IN ('Pendiente','Vencido')
-            ORDER BY p.issue_date DESC, p.id DESC LIMIT 8
-        ''').fetchall()
-        renewals = db.execute('''
-            SELECT r.*, c.business_name, pr.code as project_code
-            FROM renewals r JOIN projects pr ON pr.id = r.project_id JOIN clients c ON c.id = pr.client_id
-            WHERE r.status != 'Pagado'
-            ORDER BY r.due_date ASC LIMIT 8
-        ''').fetchall()
-        recent_projects = db.execute('''
-            SELECT p.*, c.business_name
-            FROM projects p JOIN clients c ON c.id = p.client_id
-            ORDER BY p.created_at DESC, p.id DESC LIMIT 6
-        ''').fetchall()
+            )
+        if can_services:
+            stats['services'] = scalar(db, 'SELECT COUNT(*) FROM service_catalog WHERE active = 1')
+        if can_renewals:
+            stats['renewals_due'] = scalar(db, "SELECT COUNT(*) FROM renewals WHERE status = 'Pendiente'")
+
+        urgent_projects = []
+        if can_projects:
+            urgent_projects = db.execute('''
+                SELECT p.*, c.business_name
+                FROM projects p JOIN clients c ON c.id = p.client_id
+                WHERE p.status NOT IN ('Entregado','Inactivo')
+                ORDER BY COALESCE(p.due_date,'9999-99-99') ASC LIMIT 8
+            ''').fetchall()
+
+        pending_payments = []
+        if can_billing:
+            pending_payments = db.execute('''
+                SELECT p.*, c.business_name
+                FROM payments p JOIN projects pr ON pr.id = p.project_id JOIN clients c ON c.id = pr.client_id
+                WHERE p.status IN ('Pendiente','Vencido')
+                ORDER BY p.issue_date DESC, p.id DESC LIMIT 8
+            ''').fetchall()
+
+        renewals = []
+        if can_renewals:
+            renewals = db.execute('''
+                SELECT r.*, c.business_name, pr.code as project_code
+                FROM renewals r JOIN projects pr ON pr.id = r.project_id JOIN clients c ON c.id = pr.client_id
+                WHERE r.status != 'Pagado'
+                ORDER BY r.due_date ASC LIMIT 8
+            ''').fetchall()
+
+        recent_projects = []
+        if can_projects:
+            recent_projects = db.execute('''
+                SELECT p.*, c.business_name
+                FROM projects p JOIN clients c ON c.id = p.client_id
+                ORDER BY p.created_at DESC, p.id DESC LIMIT 6
+            ''').fetchall()
         activities = db.execute('''
             SELECT a.*, c.business_name
             FROM activities a LEFT JOIN clients c ON c.id = a.client_id
             ORDER BY a.created_at DESC, a.id DESC LIMIT 10
         ''').fetchall()
         quick = {
-            'urgent_count': sum(1 for p in urgent_projects if traffic_status_for_project(p) == 'red'),
-            'warning_count': sum(1 for p in urgent_projects if traffic_status_for_project(p) == 'yellow'),
-            'pending_amount': scalar(db, "SELECT COALESCE(SUM(total),0) FROM payments WHERE status IN ('Pendiente','Vencido')"),
+            'urgent_count': 0,
+            'warning_count': 0,
+            'pending_amount': 0,
         }
+        if can_projects:
+            quick['urgent_count'] = sum(1 for p in urgent_projects if traffic_status_for_project(p) == 'red')
+            quick['warning_count'] = sum(1 for p in urgent_projects if traffic_status_for_project(p) == 'yellow')
+        if can_billing:
+            quick['pending_amount'] = scalar(db, "SELECT COALESCE(SUM(total),0) FROM payments WHERE status IN ('Pendiente','Vencido')")
         return render_template('dashboard.html', stats=stats, urgent_projects=urgent_projects, pending_payments=pending_payments,
                                renewals=renewals, recent_projects=recent_projects, activities=activities, quick=quick,
                                traffic_status_for_project=traffic_status_for_project, traffic_status_for_payment=traffic_status_for_payment,

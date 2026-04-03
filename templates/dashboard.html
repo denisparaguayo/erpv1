@@ -1,55 +1,71 @@
-{% extends 'base.html' %} {% block title %}Dashboard · ERP Mbarete{% endblock %}
+{% extends 'base.html' %}
+{% block title %}Dashboard · ERP Mbarete{% endblock %}
 {% block content %}
+{% set can_clients = can('clients.view') %}
+{% set can_projects = can('projects.view') %}
+{% set can_services = can('services.view') %}
+{% set can_renewals = can('renewals.create') %}
+{% set can_billing = can('payments.create') or can('payments.status.update') %}
 <section class="page-header">
 	<div>
 		<h2>Dashboard</h2>
-		
 	</div>
 	<div class="button-row">
+		{% if can('clients.create') %}
 		<a class="button" href="{{ url_for('clients_new') }}">Nuevo cliente</a>
-		<a class="button secondary" href="{{ url_for('budgets_form') }}"
-			>Nuevo presupuesto</a
-		>
-		<a class="button secondary" href="{{ url_for('projects_form') }}"
-			>Nuevo proyecto</a
-		>
+		{% endif %}
+		{% if can('budgets.create') %}
+		<a class="button secondary" href="{{ url_for('budgets_form') }}">Nuevo presupuesto</a>
+		{% endif %}
+		{% if can('projects.create') %}
+		<a class="button secondary" href="{{ url_for('projects_form') }}">Nuevo proyecto</a>
+		{% endif %}
 	</div>
 </section>
 <div class="stats-grid">
+	{% if can_clients %}
 	<section class="card stat">
 		<span>Clientes</span><strong>{{ stats.clients }}</strong>
 	</section>
+	{% endif %}
+	{% if can_projects %}
 	<section class="card stat">
 		<span>Proyectos activos</span><strong>{{ stats.projects }}</strong>
 	</section>
+	{% endif %}
+	{% if can_billing %}
 	<section class="card stat">
 		<span>Ingresos del mes</span><strong>{{ gs(stats.income_month) }}</strong>
 	</section>
+	{% endif %}
+	{% if can_renewals %}
 	<section class="card stat">
-		<span>Renovaciones pendientes</span
-		><strong>{{ stats.renewals_due }}</strong>
+		<span>Renovaciones pendientes</span><strong>{{ stats.renewals_due }}</strong>
 	</section>
+	{% endif %}
 </div>
 <div class="stats-grid compact-grid">
+	{% if can_projects %}
 	<section class="card stat mini">
-		<span>Urgentes</span
-		><strong class="red-text">{{ quick.urgent_count }}</strong
-		><small>Entregas vencidas</small>
+		<span>Urgentes</span><strong class="red-text">{{ quick.urgent_count }}</strong><small>Entregas vencidas</small>
 	</section>
 	<section class="card stat mini">
-		<span>Atención</span
-		><strong class="yellow-text">{{ quick.warning_count }}</strong
-		><small>Entregas en 1 a 3 días</small>
+		<span>Atención</span><strong class="yellow-text">{{ quick.warning_count }}</strong><small>Entregas en 1 a 3 días</small>
 	</section>
+	{% endif %}
+	{% if can_billing %}
 	<section class="card stat mini">
-		<span>Pagos pendientes</span><strong>{{ gs(quick.pending_amount) }}</strong
-		><small>Solo estados pendiente/vencido</small>
+		<span>Pagos pendientes</span><strong>{{ gs(quick.pending_amount) }}</strong><small>Solo estados pendiente/vencido</small>
 	</section>
+	{% endif %}
+	{% if can_services %}
 	<section class="card stat mini">
 		<span>Servicios activos</span><strong>{{ stats.services }}</strong>
 	</section>
+	{% endif %}
 </div>
 <div class="two-col">
+	{% if can_projects %}
 	<section class="card">
 		<h3>Proyectos en curso y próximas entregas</h3>
 		<table>
@@ -64,15 +80,11 @@
 				</tr>
 			</thead>
 			<tbody>
-				{% for project in urgent_projects %} {% set sem =
-				traffic_status_for_project(project) %}
+				{% for project in urgent_projects %}
+				{% set sem = traffic_status_for_project(project) %}
 				<tr>
 					<td><span class="traffic-dot {{ sem }}"></span></td>
-					<td>
-						<a href="{{ url_for('project_detail', project_id=project.id) }}"
-							>{{ project.code }}</a
-						>
-					</td>
+					<td><a href="{{ url_for('project_detail', project_id=project.id) }}">{{ project.code }}</a></td>
 					<td>{{ project.business_name }}</td>
 					<td>{{ project.plan }}</td>
 					<td>{{ project.due_date or '-' }}</td>
@@ -86,6 +98,8 @@
 			</tbody>
 		</table>
 	</section>
+	{% endif %}
+	{% if can_billing %}
 	<section class="card">
 		<h3>Pagos pendientes</h3>
 		<table>
@@ -99,8 +113,8 @@
 				</tr>
 			</thead>
 			<tbody>
-				{% for p in pending_payments %} {% set sem =
-				traffic_status_for_payment(p) %}
+				{% for p in pending_payments %}
+				{% set sem = traffic_status_for_payment(p) %}
 				<tr>
 					<td><span class="traffic-dot {{ sem }}"></span></td>
 					<td>{{ p.business_name }}</td>
@@ -116,8 +130,10 @@
 			</tbody>
 		</table>
 	</section>
+	{% endif %}
 </div>
 <div class="two-col">
+	{% if can_renewals %}
 	<section class="card">
 		<h3>Renovaciones próximas</h3>
 		<table>
@@ -131,7 +147,8 @@
 				</tr>
 			</thead>
 			<tbody>
-				{% for r in renewals %} {% set sem = traffic_status_for_renewal(r) %}
+				{% for r in renewals %}
+				{% set sem = traffic_status_for_renewal(r) %}
 				<tr>
 					<td><span class="traffic-dot {{ sem }}"></span></td>
 					<td>{{ r.project_code }} · {{ r.business_name }}</td>
@@ -147,13 +164,13 @@
 			</tbody>
 		</table>
 	</section>
+	{% endif %}
 	<section class="card">
 		<h3>Actividad reciente</h3>
 		<ul class="activity-list">
 			{% for item in activities %}
 			<li>
-				<strong>{{ item.action }}</strong><span>{{ item.details }}</span
-				><small>#{{ item.id }} · {{ item.created_at }}</small>
+				<strong>{{ item.action }}</strong><span>{{ item.details }}</span><small>#{{ item.id }} · {{ item.created_at }}</small>
 			</li>
 			{% else %}
 			<li>Sin actividad todavía.</li>
@@ -161,6 +178,7 @@
 		</ul>
 	</section>
 </div>
+{% if can_projects %}
 <section class="card">
 	<h3>Últimos proyectos</h3>
 	<table>
@@ -175,11 +193,7 @@
 		<tbody>
 			{% for project in recent_projects %}
 			<tr>
-				<td>
-					<a href="{{ url_for('project_detail', project_id=project.id) }}"
-						>{{ project.code }}</a
-					>
-				</td>
+				<td><a href="{{ url_for('project_detail', project_id=project.id) }}">{{ project.code }}</a></td>
 				<td>{{ project.business_name }}</td>
 				<td>{{ project.plan }}</td>
 				<td>{{ project.status }}</td>
@@ -192,4 +206,5 @@
 		</tbody>
 	</table>
 </section>
+{% endif %}
 {% endblock %}
