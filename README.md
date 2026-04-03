@@ -16,6 +16,7 @@ Esta version soporta SQLite y PostgreSQL, con login de usuarios y rol admin.
 - `DATABASE_URL` (opcional, para PostgreSQL)
 - `MBARETE_ADMIN_EMAIL` (opcional, default `admin@mbarete.local`)
 - `MBARETE_ADMIN_PASSWORD` (opcional, default `admin123`)
+- `MBARETE_PASSWORD_RESET_KEY` (opcional, habilita "Olvide mi contrasena")
 
 ## Modos de base de datos
 
@@ -52,8 +53,13 @@ python scripts/migrate_sqlite_to_postgres.py
 
 1. Crear recurso desde GitHub.
 2. Elegir Docker Compose con `docker-compose.coolify.yml`.
-3. Cargar variables (`MBARETE_SECRET_KEY` y opcionalmente `DATABASE_URL`).
+3. Cargar variables (`MBARETE_SECRET_KEY`, y segun uso `DATABASE_URL`, `MBARETE_ADMIN_EMAIL`, `MBARETE_ADMIN_PASSWORD`, `MBARETE_PASSWORD_RESET_KEY`).
 4. Desplegar.
+
+## Cuenta admin y recuperacion
+
+- Si queres usar tu correo propio como admin, entra con el admin actual y ve a `Mi cuenta`.
+- "Olvide mi contrasena" funciona solo si definis `MBARETE_PASSWORD_RESET_KEY`.
 
 ## Desarrollo local
 

@@ -1,0 +1,21 @@
+﻿{% extends 'base.html' %}
+{% block title %}Mi Cuenta · ERP Mbarete{% endblock %}
+{% block content %}
+<section class="card" style="max-width: 700px;">
+  <h1>Mi cuenta</h1>
+  <p class="muted">Desde aqui podes usar tu propio email para admin y cambiar tu contrasena.</p>
+  <form method="post" class="form-grid small">
+    <label>
+      Email
+      <input type="email" name="email" value="{{ current_user.email if current_user else '' }}" required>
+    </label>
+    <label>
+      Nueva contrasena (opcional)
+      <input type="password" name="new_password" placeholder="Dejar vacio para no cambiar">
+    </label>
+    <div class="form-actions">
+      <button class="btn" type="submit">Guardar cambios</button>
+    </div>
+  </form>
+</section>
+{% endblock %}

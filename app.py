@@ -78,7 +78,7 @@ DEFAULT_PAYMENT_CONDITIONS = [
     ('Personalizado', 'Condición negociada', 99),
 ]
 
-PUBLIC_ENDPOINTS = {'login', 'health', 'static'}
+PUBLIC_ENDPOINTS = {'login', 'forgot_password', 'health', 'static'}
 ADMIN_ENDPOINTS = {
     'users_index',
     'users_new',
@@ -166,6 +166,54 @@ def create_app() -> Flask:
     def logout():
         session.clear()
         return redirect(url_for('login'))
+
+    @app.route('/forgot-password', methods=['GET', 'POST'])
+    def forgot_password():
+        reset_key = os.environ.get('MBARETE_PASSWORD_RESET_KEY', '').strip()
+        if request.method == 'POST':
+            email = (request.form.get('email') or '').strip().lower()
+            new_password = request.form.get('new_password') or ''
+            provided_key = (request.form.get('reset_key') or '').strip()
+            if not reset_key:
+                flash('Recuperacion deshabilitada. Configura MBARETE_PASSWORD_RESET_KEY.', 'error')
+                return render_template('forgot_password.html')
+            if provided_key != reset_key:
+                flash('Clave de recuperacion invalida.', 'error')
+                return render_template('forgot_password.html')
+            db = get_db()
+            user = db.execute('SELECT id FROM users WHERE email = ? AND active = 1', (email,)).fetchone()
+            if not user:
+                flash('No existe un usuario activo con ese email.', 'error')
+                return render_template('forgot_password.html')
+            db.execute('UPDATE users SET password_hash = ? WHERE id = ?', (generate_password_hash(new_password), user['id']))
+            db.commit()
+            flash('Contrasena actualizada. Ya podes iniciar sesion.', 'success')
+            return redirect(url_for('login'))
+        return render_template('forgot_password.html')
+
+    @app.route('/account', methods=['GET', 'POST'])
+    def account():
+        user = getattr(g, 'current_user', None)
+        if not user:
+            return redirect(url_for('login'))
+        if request.method == 'POST':
+            db = get_db()
+            email = (request.form.get('email') or '').strip().lower()
+            new_password = (request.form.get('new_password') or '').strip()
+            if not email:
+                flash('El email es obligatorio.', 'error')
+                return render_template('account.html')
+            exists = db.execute('SELECT id FROM users WHERE email = ? AND id != ?', (email, user['id'])).fetchone()
+            if exists:
+                flash('Ese email ya esta en uso.', 'error')
+                return render_template('account.html')
+            db.execute('UPDATE users SET email = ? WHERE id = ?', (email, user['id']))
+            if new_password:
+                db.execute('UPDATE users SET password_hash = ? WHERE id = ?', (generate_password_hash(new_password), user['id']))
+            db.commit()
+            flash('Cuenta actualizada.', 'success')
+            return redirect(url_for('account'))
+        return render_template('account.html')
 
     @app.get('/users')
     @admin_required

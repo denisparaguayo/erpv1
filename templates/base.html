@@ -12,9 +12,16 @@
       {% if settings.logo_path %}
         <img src="{{ url_for('download_file', path=settings.logo_path, name='logo_agencia') }}" alt="Logo" class="sidebar-logo">
       {% endif %}
+      {% if current_user %}
+        <div class="user-chip">
+          <strong>{{ current_user.email }}</strong>
+          <small>{{ 'Administrador' if current_user.role == 'admin' else 'Usuario' }}</small>
+        </div>
+      {% endif %}
     </div>
     <nav>
       <a class="{% if request.endpoint == 'dashboard' %}active{% endif %}" href="{{ url_for('dashboard') }}">Dashboard</a>
+      <a class="{% if request.endpoint == 'account' %}active{% endif %}" href="{{ url_for('account') }}">Mi cuenta</a>
       <a class="{% if request.endpoint in ['clients_index','clients_new','clients_edit','client_detail'] %}active{% endif %}" href="{{ url_for('clients_index') }}">Clientes</a>
       <a class="{% if request.endpoint in ['budgets_index','budgets_form','budget_detail'] %}active{% endif %}" href="{{ url_for('budgets_index') }}">Presupuestos</a>
       <a class="{% if request.endpoint in ['projects_index','projects_form','project_detail'] %}active{% endif %}" href="{{ url_for('projects_index') }}">Proyectos</a>
