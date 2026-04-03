@@ -1,0 +1,25 @@
+version: '3.8'
+services:
+  erp:
+    build: .
+    container_name: mbarete-erp
+    environment:
+      MBARETE_SECRET_KEY: ${MBARETE_SECRET_KEY}
+      MBARETE_ERP_DATA_DIR: /data
+      MBARETE_SERVER_MODE: '1'
+      MBARETE_URL_SCHEME: https
+      PORT: 8000
+    volumes:
+      - mbarete_erp_data:/data
+    expose:
+      - '8000'
+    restart: unless-stopped
+    healthcheck:
+      test: ['CMD', 'python', '-c', "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health').read()"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+volumes:
+  mbarete_erp_data:
