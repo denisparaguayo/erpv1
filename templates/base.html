@@ -12,8 +12,7 @@
       {% if settings.logo_path %}
         <img src="{{ url_for('download_file', path=settings.logo_path, name='logo_agencia') }}" alt="Logo" class="sidebar-logo">
       {% endif %}
-      <p class="muted">v{{ app_version }}</p>
-      <p class="muted small-note">Datos: {{ data_root }}</p>
+      
     </div>
     <nav>
       <a class="{% if request.endpoint == 'dashboard' %}active{% endif %}" href="{{ url_for('dashboard') }}">Dashboard</a>
