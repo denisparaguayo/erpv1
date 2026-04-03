@@ -6,7 +6,9 @@
     <h2>Usuarios</h2>
     <p class="muted">Gestion de accesos del ERP.</p>
   </div>
+  {% if can('users.manage') %}
   <a class="button" href="{{ url_for('users_new') }}">Nuevo usuario</a>
+  {% endif %}
 </section>
 <section class="card">
   <table>
@@ -17,7 +19,9 @@
         <th>Rol</th>
         <th>Activo</th>
         <th>Ultimo acceso</th>
+        {% if can('users.manage') %}
         <th></th>
+        {% endif %}
       </tr>
     </thead>
     <tbody>
@@ -28,11 +32,27 @@
         <td>{{ ', '.join(u.roles) if u.roles else u.role }}</td>
         <td>{{ 'Si' if u.active else 'No' }}</td>
         <td>{{ u.last_login_at or '-' }}</td>
+        {% if can('users.manage') %}
         <td>
-          <form method="post" action="{{ url_for('users_toggle', user_id=u.id) }}">
-            <button class="button" type="submit">{{ 'Desactivar' if u.active else 'Activar' }}</button>
-          </form>
+          <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+            <a class="button secondary" href="{{ url_for('users_edit', user_id=u.id) }}">Editar</a>
+            <form method="post" action="{{ url_for('users_toggle', user_id=u.id) }}">
+              <button class="button" type="submit">{{ 'Desactivar' if u.active else 'Activar' }}</button>
+            </form>
+            <form method="post" action="{{ url_for('users_delete', user_id=u.id) }}" onsubmit="return confirm('¿Eliminar este usuario? Esta acción no se puede deshacer.');">
+              <button class="button secondary" type="submit">Eliminar</button>
+            </form>
+          </div>
         </td>
+        {% endif %}
+      </tr>
+      {% else %}
+      <tr>
+        {% if can('users.manage') %}
+        <td colspan="6">No hay usuarios cargados.</td>
+        {% else %}
+        <td colspan="5">No hay usuarios cargados.</td>
+        {% endif %}
       </tr>
       {% endfor %}
     </tbody>

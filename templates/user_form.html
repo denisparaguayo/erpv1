@@ -1,24 +1,33 @@
-﻿{% extends 'base.html' %}
-{% block title %}Nuevo Usuario · ERP Mbarete{% endblock %}
+{% extends 'base.html' %}
+{% block title %}{% if is_edit %}Editar Usuario{% else %}Nuevo Usuario{% endif %} · ERP Mbarete{% endblock %}
 {% block content %}
 <section class="card">
+  {% if is_edit %}
+  <h1>Editar usuario</h1>
+  {% else %}
   <h1>Nuevo usuario</h1>
+  {% endif %}
   <form method="post" class="grid grid-2">
     <label>Email
-      <input type="email" name="email" required>
+      <input type="email" name="email" value="{{ user_data.email if user_data else '' }}" required>
     </label>
     <label>Rol
       <select name="role_code" required>
         {% for role in roles %}
-          <option value="{{ role.code }}">{{ role.code }} - {{ role.name }}</option>
+          <option value="{{ role.code }}" {% if user_data and role.code == user_data.role %}selected{% endif %}>{{ role.code }} - {{ role.name }}</option>
         {% endfor %}
       </select>
     </label>
-    <label class="span-2">Contrasena
-      <input type="password" name="password" required>
+    <label class="span-2">
+      {% if is_edit %}Nueva contrasena (opcional){% else %}Contrasena{% endif %}
+      <input type="password" name="password" {% if not is_edit %}required{% endif %}>
     </label>
     <div class="span-2" style="display: flex; gap: 8px;">
+      {% if is_edit %}
+      <button class="button" type="submit">Guardar cambios</button>
+      {% else %}
       <button class="button" type="submit">Crear usuario</button>
+      {% endif %}
       <a class="button secondary" href="{{ url_for('users_index') }}">Cancelar</a>
     </div>
   </form>

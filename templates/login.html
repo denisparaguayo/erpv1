@@ -9,6 +9,11 @@
 <body>
   <main class="content auth-shell">
     <section class="card auth-card">
+      {% if has_login_logo %}
+      <div style="display: flex; justify-content: center; margin-bottom: 12px;">
+        <img src="{{ url_for('public_logo') }}" alt="Logo" style="max-height: 72px; width: auto;">
+      </div>
+      {% endif %}
       <h1>Iniciar sesion</h1>
       {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
@@ -21,10 +26,14 @@
       {% endwith %}
       <form method="post" class="stacked-form">
         <label>Email
-          <input type="email" name="email" required>
+          <input type="email" name="email" value="{{ login_email or '' }}" autocomplete="username" required>
         </label>
         <label>Contrasena
-          <input type="password" name="password" required>
+          <input type="password" name="password" autocomplete="current-password" required>
+        </label>
+        <label style="display: flex; align-items: center; gap: 8px;">
+          <input type="checkbox" name="remember_login" value="1" {% if remember_login %}checked{% endif %}>
+          <span>Recordar usuario y contrasena</span>
         </label>
         <button class="btn" type="submit">Entrar</button>
       </form>

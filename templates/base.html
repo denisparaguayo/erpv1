@@ -35,7 +35,7 @@
         <a class="{% if request.endpoint in ['services_index','services_form'] %}active{% endif %}" href="{{ url_for('services_index') }}">Servicios</a>
       {% endif %}
       {% if can('users.view') %}
-        <a class="{% if request.endpoint in ['users_index','users_new'] %}active{% endif %}" href="{{ url_for('users_index') }}">Usuarios</a>
+        <a class="{% if request.endpoint in ['users_index','users_new','users_edit'] %}active{% endif %}" href="{{ url_for('users_index') }}">Usuarios</a>
       {% endif %}
       {% if can('settings.view') %}
         <a class="{% if request.endpoint in ['settings_page'] %}active{% endif %}" href="{{ url_for('settings_page') }}">Configuracion</a>

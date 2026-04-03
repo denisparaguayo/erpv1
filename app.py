@@ -77,7 +77,7 @@ DEFAULT_PAYMENT_CONDITIONS = [
     ('Personalizado', 'CondiciÃ³n negociada', 99),
 ]
 
-PUBLIC_ENDPOINTS = {'login', 'forgot_password', 'health', 'static'}
+PUBLIC_ENDPOINTS = {'login', 'forgot_password', 'health', 'public_logo', 'static'}
 RBAC_ROLES = [
     ('super_admin', 'Super Admin', 'Control total del sistema'),
     ('gerencia', 'Gerencia', 'Control completo operativo y financiero'),
@@ -156,6 +156,8 @@ ENDPOINT_PERMISSIONS = {
     'account': ['account.self.manage'],
     'users_index': ['users.view'],
     'users_new': ['users.manage'],
+    'users_edit': ['users.manage'],
+    'users_delete': ['users.manage'],
     'users_toggle': ['users.manage'],
     'settings_page': ['settings.view'],
     'settings_logo_delete': ['settings.manage'],
@@ -247,10 +249,14 @@ def create_app() -> Flask:
 
     @app.route('/login', methods=['GET', 'POST'])
     def login():
+        db = get_db()
+        has_login_logo = bool((get_settings(db).get('logo_path') or '').strip())
+        remembered_email = (request.cookies.get('remember_email') or '').strip().lower()
+        remember_checked = request.cookies.get('remember_login') == '1'
         if request.method == 'POST':
             email = (request.form.get('email') or '').strip().lower()
             password = request.form.get('password') or ''
-            db = get_db()
+            remember_login = request.form.get('remember_login') == '1'
             user = db.execute('SELECT * FROM users WHERE email = ? AND active = 1', (email,)).fetchone()
             if user and check_password_hash(user['password_hash'], password):
                 session['user_id'] = user['id']
@@ -259,9 +265,39 @@ def create_app() -> Flask:
                 next_path = request.args.get('next') or url_for('dashboard')
                 if not next_path.startswith('/'):
                     next_path = url_for('dashboard')
-                return redirect(next_path)
+                response = redirect(next_path)
+                if remember_login:
+                    cookie_opts = {
+                        'max_age': 60 * 60 * 24 * 90,
+                        'samesite': 'Lax',
+                        'secure': app.config.get('SESSION_COOKIE_SECURE', True),
+                        'httponly': True,
+                    }
+                    response.set_cookie('remember_email', email, **cookie_opts)
+                    response.set_cookie('remember_login', '1', **cookie_opts)
+                else:
+                    response.delete_cookie('remember_email')
+                    response.delete_cookie('remember_login')
+                return response
             flash('Credenciales invÃ¡lidas.', 'error')
-        return render_template('login.html')
+            return render_template('login.html', login_email=email, remember_login=remember_login, has_login_logo=has_login_logo)
+        return render_template('login.html', login_email=remembered_email, remember_login=remember_checked, has_login_logo=has_login_logo)
+
+    @app.get('/public/logo')
+    def public_logo():
+        db = get_db()
+        logo_path = (get_settings(db).get('logo_path') or '').strip()
+        if not logo_path:
+            return ('', 404)
+        target = Path(logo_path).resolve()
+        allowed_roots = [DATA_ROOT.resolve()]
+        if not any(target.is_relative_to(root) for root in allowed_roots):
+            return ('', 404)
+        if not target.exists() or not target.is_file():
+            return ('', 404)
+        if target.suffix.lower() not in ALLOWED_UPLOADS:
+            return ('', 404)
+        return send_file(target, as_attachment=False)
 
     @app.post('/logout')
     def logout():
@@ -337,11 +373,11 @@ def create_app() -> Flask:
                 role_code = 'vendedor'
             if not email or not password:
                 flash('Email y contraseÃ±a son obligatorios.', 'error')
-                return render_template('user_form.html', roles=roles)
+                return render_template('user_form.html', roles=roles, user_data=None, is_edit=False)
             exists = db.execute('SELECT id FROM users WHERE email = ?', (email,)).fetchone()
             if exists:
                 flash('Ese email ya existe.', 'error')
-                return render_template('user_form.html', roles=roles)
+                return render_template('user_form.html', roles=roles, user_data=None, is_edit=False)
             cur = db.execute(
                 'INSERT INTO users (email, password_hash, role, active) VALUES (?, ?, ?, 1)',
                 (email, generate_password_hash(password), role_code),
@@ -351,7 +387,41 @@ def create_app() -> Flask:
             db.commit()
             flash('Usuario creado correctamente.', 'success')
             return redirect(url_for('users_index'))
-        return render_template('user_form.html', roles=roles)
+        return render_template('user_form.html', roles=roles, user_data=None, is_edit=False)
+
+    @app.route('/users/<int:user_id>/edit', methods=['GET', 'POST'])
+    def users_edit(user_id: int):
+        db = get_db()
+        roles = db.execute('SELECT id, code, name FROM roles WHERE active = 1 ORDER BY id').fetchall()
+        user = db.execute('SELECT id, email, role, active FROM users WHERE id = ?', (user_id,)).fetchone()
+        if not user:
+            flash('Usuario no encontrado.', 'error')
+            return redirect(url_for('users_index'))
+        if request.method == 'POST':
+            email = (request.form.get('email') or '').strip().lower()
+            new_password = request.form.get('password') or ''
+            role_code = (request.form.get('role_code') or user['role']).strip().lower()
+            valid_codes = {r['code'] for r in roles}
+            if role_code not in valid_codes:
+                role_code = user['role']
+            if not email:
+                flash('Email es obligatorio.', 'error')
+                return render_template('user_form.html', roles=roles, user_data=user, is_edit=True)
+            exists = db.execute('SELECT id FROM users WHERE email = ? AND id != ?', (email, user_id)).fetchone()
+            if exists:
+                flash('Ese email ya existe.', 'error')
+                return render_template('user_form.html', roles=roles, user_data=user, is_edit=True)
+            if user_id == g.current_user['id'] and role_code != user['role']:
+                flash('No podés cambiar tu propio rol desde esta pantalla.', 'error')
+                return render_template('user_form.html', roles=roles, user_data=user, is_edit=True)
+            db.execute('UPDATE users SET email = ?, role = ? WHERE id = ?', (email, role_code, user_id))
+            assign_role_to_user(db, user_id, role_code, g.current_user['id'])
+            if new_password:
+                db.execute('UPDATE users SET password_hash = ? WHERE id = ?', (generate_password_hash(new_password), user_id))
+            db.commit()
+            flash('Usuario actualizado correctamente.', 'success')
+            return redirect(url_for('users_index'))
+        return render_template('user_form.html', roles=roles, user_data=user, is_edit=True)
 
     @app.post('/users/<int:user_id>/toggle')
     def users_toggle(user_id: int):
@@ -366,6 +436,27 @@ def create_app() -> Flask:
         db.execute('UPDATE users SET active = ? WHERE id = ?', (0 if user['active'] else 1, user_id))
         db.commit()
         flash('Estado de usuario actualizado.', 'success')
+        return redirect(url_for('users_index'))
+
+    @app.post('/users/<int:user_id>/delete')
+    def users_delete(user_id: int):
+        db = get_db()
+        user = db.execute('SELECT id, role FROM users WHERE id = ?', (user_id,)).fetchone()
+        if not user:
+            flash('Usuario no encontrado.', 'error')
+            return redirect(url_for('users_index'))
+        if user_id == g.current_user['id']:
+            flash('No podés eliminar tu propio usuario.', 'error')
+            return redirect(url_for('users_index'))
+        if user['role'] == 'super_admin':
+            remaining_admins = scalar(db, 'SELECT COUNT(*) FROM users WHERE role = ? AND id != ?', ('super_admin', user_id))
+            if remaining_admins == 0:
+                flash('No podés eliminar el último super admin.', 'error')
+                return redirect(url_for('users_index'))
+        db.execute('DELETE FROM user_roles WHERE user_id = ?', (user_id,))
+        db.execute('DELETE FROM users WHERE id = ?', (user_id,))
+        db.commit()
+        flash('Usuario eliminado correctamente.', 'success')
         return redirect(url_for('users_index'))
 
 
