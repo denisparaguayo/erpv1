@@ -74,8 +74,11 @@ input:focus, select:focus, textarea:focus { outline: 2px solid rgba(34,81,204,.1
 .logo-preview img { max-width: 180px; max-height: 90px; object-fit: contain; border: 1px solid var(--line); border-radius: 16px; padding: 10px; background: #fff; }
 .traffic-dot{display:inline-block;width:12px;height:12px;border-radius:999px}.traffic-dot.green{background:var(--success)}.traffic-dot.yellow{background:var(--warning)}.traffic-dot.red{background:var(--danger)}
 .red-text{color:var(--danger)} .yellow-text{color:var(--warning)}
-@media (max-width: 980px) {
+@media (max-width: 760px) {
   body { grid-template-columns: 1fr; }
+  .sidebar { gap: 14px; padding: 14px; }
+  .sidebar nav { max-height: 36vh; overflow: auto; padding-right: 4px; }
+  .sidebar nav a { padding: 9px 11px; }
   .stats-grid, .compact-grid, .two-col, .three-col, .form-grid, .form-grid.small { grid-template-columns: 1fr; }
 }
 
