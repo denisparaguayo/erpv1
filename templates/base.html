@@ -1,4 +1,4 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="es">
 <head>
   <meta charset="utf-8">
@@ -12,7 +12,6 @@
       {% if settings.logo_path %}
         <img src="{{ url_for('download_file', path=settings.logo_path, name='logo_agencia') }}" alt="Logo" class="sidebar-logo">
       {% endif %}
-      
     </div>
     <nav>
       <a class="{% if request.endpoint == 'dashboard' %}active{% endif %}" href="{{ url_for('dashboard') }}">Dashboard</a>
@@ -20,11 +19,21 @@
       <a class="{% if request.endpoint in ['budgets_index','budgets_form','budget_detail'] %}active{% endif %}" href="{{ url_for('budgets_index') }}">Presupuestos</a>
       <a class="{% if request.endpoint in ['projects_index','projects_form','project_detail'] %}active{% endif %}" href="{{ url_for('projects_index') }}">Proyectos</a>
       <a class="{% if request.endpoint in ['services_index','services_form'] %}active{% endif %}" href="{{ url_for('services_index') }}">Servicios</a>
-      <a class="{% if request.endpoint in ['settings_page'] %}active{% endif %}" href="{{ url_for('settings_page') }}">Configuración</a>
+      {% if current_user and current_user.role == 'admin' %}
+        <a class="{% if request.endpoint in ['users_index','users_new'] %}active{% endif %}" href="{{ url_for('users_index') }}">Usuarios</a>
+        <a class="{% if request.endpoint in ['settings_page'] %}active{% endif %}" href="{{ url_for('settings_page') }}">Configuracion</a>
+      {% endif %}
       <a href="{{ url_for('clients_new') }}">Nuevo cliente</a>
       <a href="{{ url_for('budgets_form') }}">Nuevo presupuesto</a>
       <a href="{{ url_for('projects_form') }}">Nuevo proyecto</a>
-      <a href="{{ url_for('download_backup') }}">Descargar backup</a>
+      {% if current_user and current_user.role == 'admin' %}
+        <a href="{{ url_for('download_backup') }}">Descargar backup</a>
+      {% endif %}
+      {% if current_user %}
+        <form method="post" action="{{ url_for('logout') }}" style="margin-top: 10px;">
+          <button class="btn btn-outline" type="submit">Cerrar sesion</button>
+        </form>
+      {% endif %}
     </nav>
   </aside>
   <main class="content">

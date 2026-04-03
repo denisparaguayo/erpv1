@@ -1,12 +1,10 @@
-PRAGMA foreign_keys = ON;
-
-CREATE TABLE IF NOT EXISTS app_meta (
+﻿CREATE TABLE IF NOT EXISTS app_meta (
     key TEXT PRIMARY KEY,
     value TEXT
 );
 
 CREATE TABLE IF NOT EXISTS users (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    id BIGSERIAL PRIMARY KEY,
     email TEXT NOT NULL UNIQUE,
     password_hash TEXT NOT NULL,
     role TEXT NOT NULL DEFAULT 'user',
@@ -21,7 +19,7 @@ CREATE TABLE IF NOT EXISTS settings (
 );
 
 CREATE TABLE IF NOT EXISTS payment_methods (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    id BIGSERIAL PRIMARY KEY,
     name TEXT NOT NULL,
     description TEXT,
     sort_order INTEGER NOT NULL DEFAULT 99,
@@ -30,7 +28,7 @@ CREATE TABLE IF NOT EXISTS payment_methods (
 );
 
 CREATE TABLE IF NOT EXISTS payment_conditions (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    id BIGSERIAL PRIMARY KEY,
     name TEXT NOT NULL,
     description TEXT,
     sort_order INTEGER NOT NULL DEFAULT 99,
@@ -39,7 +37,7 @@ CREATE TABLE IF NOT EXISTS payment_conditions (
 );
 
 CREATE TABLE IF NOT EXISTS service_catalog (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    id BIGSERIAL PRIMARY KEY,
     name TEXT NOT NULL,
     category TEXT,
     service_kind TEXT NOT NULL DEFAULT 'extra',
@@ -51,7 +49,7 @@ CREATE TABLE IF NOT EXISTS service_catalog (
 );
 
 CREATE TABLE IF NOT EXISTS clients (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    id BIGSERIAL PRIMARY KEY,
     code TEXT UNIQUE,
     business_name TEXT NOT NULL,
     category TEXT,
@@ -70,7 +68,7 @@ CREATE TABLE IF NOT EXISTS clients (
 );
 
 CREATE TABLE IF NOT EXISTS projects (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    id BIGSERIAL PRIMARY KEY,
     code TEXT UNIQUE,
     client_id INTEGER NOT NULL,
     main_service_id INTEGER,
@@ -106,7 +104,7 @@ CREATE TABLE IF NOT EXISTS projects (
 );
 
 CREATE TABLE IF NOT EXISTS project_services (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    id BIGSERIAL PRIMARY KEY,
     project_id INTEGER NOT NULL,
     service_id INTEGER,
     item_role TEXT NOT NULL,
@@ -120,7 +118,7 @@ CREATE TABLE IF NOT EXISTS project_services (
 );
 
 CREATE TABLE IF NOT EXISTS budgets (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    id BIGSERIAL PRIMARY KEY,
     code TEXT UNIQUE,
     client_id INTEGER NOT NULL,
     main_service_id INTEGER,
@@ -136,7 +134,7 @@ CREATE TABLE IF NOT EXISTS budgets (
 );
 
 CREATE TABLE IF NOT EXISTS budget_items (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    id BIGSERIAL PRIMARY KEY,
     budget_id INTEGER NOT NULL,
     service_id INTEGER,
     item_role TEXT NOT NULL,
@@ -150,7 +148,7 @@ CREATE TABLE IF NOT EXISTS budget_items (
 );
 
 CREATE TABLE IF NOT EXISTS payments (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    id BIGSERIAL PRIMARY KEY,
     project_id INTEGER NOT NULL,
     document_type TEXT NOT NULL,
     document_number TEXT NOT NULL,
@@ -176,7 +174,7 @@ CREATE TABLE IF NOT EXISTS payments (
 );
 
 CREATE TABLE IF NOT EXISTS invoice_items (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    id BIGSERIAL PRIMARY KEY,
     payment_id INTEGER NOT NULL,
     item_type TEXT,
     service_id INTEGER,
@@ -190,7 +188,7 @@ CREATE TABLE IF NOT EXISTS invoice_items (
 );
 
 CREATE TABLE IF NOT EXISTS project_files (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    id BIGSERIAL PRIMARY KEY,
     project_id INTEGER NOT NULL,
     category TEXT NOT NULL,
     purpose TEXT NOT NULL DEFAULT 'Documento',
@@ -204,7 +202,7 @@ CREATE TABLE IF NOT EXISTS project_files (
 );
 
 CREATE TABLE IF NOT EXISTS html_versions (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    id BIGSERIAL PRIMARY KEY,
     project_id INTEGER NOT NULL,
     version_number INTEGER NOT NULL,
     original_name TEXT NOT NULL,
@@ -218,7 +216,7 @@ CREATE TABLE IF NOT EXISTS html_versions (
 );
 
 CREATE TABLE IF NOT EXISTS renewals (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    id BIGSERIAL PRIMARY KEY,
     project_id INTEGER NOT NULL,
     renewal_type TEXT NOT NULL,
     amount INTEGER DEFAULT 0,
@@ -231,7 +229,7 @@ CREATE TABLE IF NOT EXISTS renewals (
 );
 
 CREATE TABLE IF NOT EXISTS activities (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    id BIGSERIAL PRIMARY KEY,
     client_id INTEGER,
     project_id INTEGER,
     action TEXT NOT NULL,

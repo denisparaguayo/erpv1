@@ -1,0 +1,34 @@
+﻿<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Iniciar sesion · ERP Mbarete</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}">
+</head>
+<body>
+  <main class="content" style="max-width: 500px; margin: 40px auto;">
+    <section class="card">
+      <h1>Iniciar sesion</h1>
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          <div class="flash-stack">
+            {% for category, message in messages %}
+              <div class="flash {{ category }}">{{ message }}</div>
+            {% endfor %}
+          </div>
+        {% endif %}
+      {% endwith %}
+      <form method="post" class="grid" style="gap: 12px;">
+        <label>Email
+          <input type="email" name="email" required>
+        </label>
+        <label>Contrasena
+          <input type="password" name="password" required>
+        </label>
+        <button class="btn" type="submit">Entrar</button>
+      </form>
+    </section>
+  </main>
+</body>
+</html>

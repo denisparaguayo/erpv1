@@ -1,0 +1,38 @@
+﻿{% extends 'base.html' %}
+{% block title %}Usuarios · ERP Mbarete{% endblock %}
+{% block content %}
+<section class="card">
+  <div class="table-actions">
+    <h1>Usuarios</h1>
+    <a class="btn" href="{{ url_for('users_new') }}">Nuevo usuario</a>
+  </div>
+  <table>
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Email</th>
+        <th>Rol</th>
+        <th>Activo</th>
+        <th>Ultimo acceso</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for u in users %}
+      <tr>
+        <td>{{ u.id }}</td>
+        <td>{{ u.email }}</td>
+        <td>{{ u.role }}</td>
+        <td>{{ 'Si' if u.active else 'No' }}</td>
+        <td>{{ u.last_login_at or '-' }}</td>
+        <td>
+          <form method="post" action="{{ url_for('users_toggle', user_id=u.id) }}">
+            <button class="btn btn-outline" type="submit">{{ 'Desactivar' if u.active else 'Activar' }}</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endblock %}

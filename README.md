@@ -1,66 +1,59 @@
-# Mbarete ERP · VPS / Coolify Ready
+﻿# Mbarete ERP - VPS / Coolify Ready
 
-Esta versión está preparada para subir desde tu repo de GitHub a **Coolify** y publicar en:
+Esta version soporta SQLite y PostgreSQL, con login de usuarios y rol admin.
 
-- `erp.mbarete.digital`
+## Cambios clave
 
-## Qué cambia en esta refactorización
+- Login obligatorio para usar el ERP.
+- Roles `admin` y `user`.
+- Compatibilidad de conexion por `DATABASE_URL`.
+- Si `DATABASE_URL` no existe, sigue usando SQLite.
+- Script de migracion SQLite -> PostgreSQL.
 
-- arranque en **producción** con `gunicorn`
-- app escuchando en `0.0.0.0:8000`
-- **healthcheck** en `/health`
-- datos persistentes fuera del código usando volumen Docker en `/data`
-- **creación automática** de la base SQLite al primer arranque
-- sin apertura automática de navegador en servidor
-- preparada para desplegar desde **GitHub + Coolify**
+## Variables de entorno
 
-## Base de datos
+- `MBARETE_SECRET_KEY` (obligatoria)
+- `DATABASE_URL` (opcional, para PostgreSQL)
+- `MBARETE_ADMIN_EMAIL` (opcional, default `admin@mbarete.local`)
+- `MBARETE_ADMIN_PASSWORD` (opcional, default `admin123`)
 
-La base actual sigue siendo **SQLite**, pero ahora vive en un volumen persistente de Docker:
+## Modos de base de datos
 
-- `/data/instance/mbarete_erp.sqlite3`
+### SQLite (actual)
 
-Se crea sola cuando la app arranca por primera vez.
+Se guarda en `/data/instance/mbarete_erp.sqlite3`.
 
-## Estructura persistente en el VPS
+### PostgreSQL
 
-Dentro del volumen `/data` la app crea automáticamente:
+Defini `DATABASE_URL`, por ejemplo:
 
-- `instance/`
-- `Proyectos/`
-- `uploads/`
-- `backups/`
-- `settings/`
+```bash
+DATABASE_URL=postgresql://erp_user:erp_pass@127.0.0.1:5432/erp_db
+```
+
+Al arrancar, la app aplica `schema_postgres.sql` automaticamente.
+
+## Migracion a PostgreSQL
+
+1. Crear DB y usuario en PostgreSQL.
+2. Correr la app una vez con `DATABASE_URL` para crear esquema.
+3. Ejecutar migracion:
+
+```bash
+pip install -r requirements.txt
+set DATABASE_URL=postgresql://erp_user:erp_pass@127.0.0.1:5432/erp_db
+set SQLITE_PATH=C:\ruta\mbarete_erp.sqlite3
+python scripts/migrate_sqlite_to_postgres.py
+```
+
+4. Validar datos y luego hacer deploy con `DATABASE_URL` en Coolify.
 
 ## Despliegue en Coolify
 
-### Opción recomendada
-Usá **Docker Compose** con el archivo:
-
-- `docker-compose.coolify.yml`
-
-### Variables necesarias
-Creá en Coolify esta variable:
-
-- `MBARETE_SECRET_KEY`
-
-Ejemplo: una clave larga y aleatoria.
-
-### Dominio
-En Coolify configurá el dominio:
-
-- `erp.mbarete.digital`
-
-Y hacé que apunte al servicio `erp` puerto `8000`.
-
-## Flujo recomendado en Coolify
-
-1. crear nuevo recurso desde GitHub
-2. elegir **Docker Compose**
-3. seleccionar `docker-compose.coolify.yml`
-4. cargar la variable `MBARETE_SECRET_KEY`
-5. configurar el dominio `erp.mbarete.digital`
-6. desplegar
+1. Crear recurso desde GitHub.
+2. Elegir Docker Compose con `docker-compose.coolify.yml`.
+3. Cargar variables (`MBARETE_SECRET_KEY` y opcionalmente `DATABASE_URL`).
+4. Desplegar.
 
 ## Desarrollo local
 
@@ -69,24 +62,12 @@ pip install -r requirements.txt
 python app.py
 ```
 
-## Producción local con Docker
-
-```bash
-docker compose -f docker-compose.coolify.yml up --build
-```
-
-## Endpoint de salud
+## Healthcheck
 
 - `GET /health`
 
 Respuesta esperada:
 
 ```json
-{"status":"ok","app_version":"3.5.1","schema_version":"3.5.1"}
+{"status":"ok","app_version":"3.5.1","schema_version":"3.6.0"}
 ```
-
-## Nota importante
-
-Esta refactorización deja el ERP **listo para VPS**.
-
-El siguiente paso natural, cuando quieras escalar más, es migrar de SQLite a PostgreSQL. Pero para publicar ya y trabajar en `erp.mbarete.digital`, esta base queda estable y simple de operar.

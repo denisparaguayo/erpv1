@@ -1,0 +1,25 @@
+﻿{% extends 'base.html' %}
+{% block title %}Nuevo Usuario · ERP Mbarete{% endblock %}
+{% block content %}
+<section class="card">
+  <h1>Nuevo usuario</h1>
+  <form method="post" class="grid grid-2">
+    <label>Email
+      <input type="email" name="email" required>
+    </label>
+    <label>Rol
+      <select name="role">
+        <option value="user">Usuario</option>
+        <option value="admin">Admin</option>
+      </select>
+    </label>
+    <label class="span-2">Contrasena
+      <input type="password" name="password" required>
+    </label>
+    <div class="span-2" style="display: flex; gap: 8px;">
+      <button class="btn" type="submit">Crear usuario</button>
+      <a class="btn btn-outline" href="{{ url_for('users_index') }}">Cancelar</a>
+    </div>
+  </form>
+</section>
+{% endblock %}

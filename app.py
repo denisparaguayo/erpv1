@@ -1,22 +1,24 @@
 from __future__ import annotations
 from datetime import date, datetime
+from functools import wraps
 from pathlib import Path
 import json
 import os
 import shutil
 import subprocess
 
-from flask import Flask, flash, g, jsonify, redirect, render_template, request, send_file, url_for
+from flask import Flask, flash, g, jsonify, redirect, render_template, request, send_file, session, url_for
+from werkzeug.security import check_password_hash, generate_password_hash
 from werkzeug.utils import secure_filename
 
-from services.db import close_db, get_db, init_db
+from services.db import close_db, db_backend, get_db, init_db
 from services.pdf_generator import create_invoice_pdf
 from services.utils import ensure_project_structure, format_project_folder_name, guarani, money_display, next_code, sanitize_name
 from services.config_manager import CONFIG_FILE, resolve_data_root
 from werkzeug.middleware.proxy_fix import ProxyFix
 
 APP_VERSION = '3.5.1'
-SCHEMA_VERSION = '3.5.1'
+SCHEMA_VERSION = '3.6.0'
 DATA_ROOT = Path(os.environ.get('MBARETE_ERP_DATA_DIR', resolve_data_root()))
 INSTANCE_DIR = DATA_ROOT / 'instance'
 PROJECTS_ROOT = DATA_ROOT / 'Proyectos'
@@ -76,11 +78,33 @@ DEFAULT_PAYMENT_CONDITIONS = [
     ('Personalizado', 'Condición negociada', 99),
 ]
 
+PUBLIC_ENDPOINTS = {'login', 'health', 'static'}
+ADMIN_ENDPOINTS = {
+    'users_index',
+    'users_new',
+    'users_toggle',
+    'settings_page',
+    'settings_logo_delete',
+    'settings_general_save',
+    'payment_methods_add',
+    'payment_methods_toggle',
+    'payment_methods_delete',
+    'payment_conditions_add',
+    'payment_conditions_toggle',
+    'payment_conditions_delete',
+    'services_form',
+    'services_delete',
+    'download_backup',
+}
+
 
 def create_app() -> Flask:
     app = Flask(__name__)
     app.config['SECRET_KEY'] = os.environ.get('MBARETE_SECRET_KEY', 'change-this-in-production')
     app.config['PREFERRED_URL_SCHEME'] = os.environ.get('MBARETE_URL_SCHEME', 'https')
+    app.config['SESSION_COOKIE_HTTPONLY'] = True
+    app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+    app.config['SESSION_COOKIE_SECURE'] = os.environ.get('MBARETE_SESSION_SECURE', '1') == '1'
     app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_port=1, x_prefix=1)
     app.instance_path = str(INSTANCE_DIR)
     for folder in [INSTANCE_DIR, PROJECTS_ROOT, UPLOADS_ROOT, BACKUPS_ROOT, SETTINGS_ROOT]:
@@ -99,6 +123,7 @@ def create_app() -> Flask:
             'config_file': str(CONFIG_FILE),
             'app_version': APP_VERSION,
             'settings': get_settings(db),
+            'current_user': getattr(g, 'current_user', None),
         }
 
     @app.before_request
@@ -107,6 +132,89 @@ def create_app() -> Flask:
             init_db(APP_VERSION, SCHEMA_VERSION, BACKUPS_ROOT)
             ensure_defaults()
             g._db_ready = True
+        g.current_user = current_user()
+        endpoint = request.endpoint or ''
+        if not endpoint:
+            return
+        if endpoint in PUBLIC_ENDPOINTS or endpoint.startswith('static'):
+            return
+        if not g.current_user:
+            return redirect(url_for('login', next=request.path))
+        if endpoint in ADMIN_ENDPOINTS and g.current_user['role'] != 'admin':
+            flash('Solo el administrador puede realizar esa acción.', 'error')
+            return redirect(url_for('dashboard'))
+
+    @app.route('/login', methods=['GET', 'POST'])
+    def login():
+        if request.method == 'POST':
+            email = (request.form.get('email') or '').strip().lower()
+            password = request.form.get('password') or ''
+            db = get_db()
+            user = db.execute('SELECT * FROM users WHERE email = ? AND active = 1', (email,)).fetchone()
+            if user and check_password_hash(user['password_hash'], password):
+                session['user_id'] = user['id']
+                db.execute('UPDATE users SET last_login_at = ? WHERE id = ?', (datetime.now().isoformat(timespec='seconds'), user['id']))
+                db.commit()
+                next_path = request.args.get('next') or url_for('dashboard')
+                if not next_path.startswith('/'):
+                    next_path = url_for('dashboard')
+                return redirect(next_path)
+            flash('Credenciales inválidas.', 'error')
+        return render_template('login.html')
+
+    @app.post('/logout')
+    def logout():
+        session.clear()
+        return redirect(url_for('login'))
+
+    @app.get('/users')
+    @admin_required
+    def users_index():
+        db = get_db()
+        users = db.execute('SELECT id, email, role, active, created_at, last_login_at FROM users ORDER BY id').fetchall()
+        return render_template('users.html', users=users)
+
+    @app.route('/users/new', methods=['GET', 'POST'])
+    @admin_required
+    def users_new():
+        if request.method == 'POST':
+            db = get_db()
+            email = (request.form.get('email') or '').strip().lower()
+            password = request.form.get('password') or ''
+            role = (request.form.get('role') or 'user').strip().lower()
+            if role not in {'admin', 'user'}:
+                role = 'user'
+            if not email or not password:
+                flash('Email y contraseña son obligatorios.', 'error')
+                return render_template('user_form.html')
+            exists = db.execute('SELECT id FROM users WHERE email = ?', (email,)).fetchone()
+            if exists:
+                flash('Ese email ya existe.', 'error')
+                return render_template('user_form.html')
+            db.execute(
+                'INSERT INTO users (email, password_hash, role, active) VALUES (?, ?, ?, 1)',
+                (email, generate_password_hash(password), role),
+            )
+            db.commit()
+            flash('Usuario creado correctamente.', 'success')
+            return redirect(url_for('users_index'))
+        return render_template('user_form.html')
+
+    @app.post('/users/<int:user_id>/toggle')
+    @admin_required
+    def users_toggle(user_id: int):
+        db = get_db()
+        user = db.execute('SELECT id, active, role FROM users WHERE id = ?', (user_id,)).fetchone()
+        if not user:
+            flash('Usuario no encontrado.', 'error')
+            return redirect(url_for('users_index'))
+        if user_id == g.current_user['id']:
+            flash('No podés desactivar tu propio usuario.', 'error')
+            return redirect(url_for('users_index'))
+        db.execute('UPDATE users SET active = ? WHERE id = ?', (0 if user['active'] else 1, user_id))
+        db.commit()
+        flash('Estado de usuario actualizado.', 'success')
+        return redirect(url_for('users_index'))
 
 
     @app.get('/health')
@@ -124,7 +232,12 @@ def create_app() -> Flask:
             'payments': scalar(db, 'SELECT COUNT(*) FROM payments'),
             'services': scalar(db, 'SELECT COUNT(*) FROM service_catalog WHERE active = 1'),
             'renewals_due': scalar(db, "SELECT COUNT(*) FROM renewals WHERE status = 'Pendiente'"),
-            'income_month': scalar(db, "SELECT COALESCE(SUM(total),0) FROM payments WHERE status = 'Pagado' AND strftime('%Y-%m', COALESCE(paid_date, issue_date))=strftime('%Y-%m','now')"),
+            'income_month': scalar(
+                db,
+                "SELECT COALESCE(SUM(total),0) FROM payments WHERE status = 'Pagado' "
+                "AND SUBSTRING(COALESCE(paid_date, issue_date), 1, 7)=?",
+                (date.today().strftime('%Y-%m'),),
+            ),
         }
         urgent_projects = db.execute('''
             SELECT p.*, c.business_name
@@ -166,6 +279,9 @@ def create_app() -> Flask:
 
     @app.get('/backup/download')
     def download_backup():
+        if db_backend() == 'postgres':
+            flash('Para PostgreSQL usá backup con pg_dump en el servidor.', 'error')
+            return redirect(url_for('settings_page'))
         db_path = Path(app.instance_path) / 'mbarete_erp.sqlite3'
         backup_name = f"mbarete_backup_manual_{datetime.now().strftime('%Y%m%d_%H%M%S')}.sqlite3"
         backup_path = BACKUPS_ROOT / backup_name
@@ -606,9 +722,22 @@ def create_app() -> Flask:
 
     @app.get('/download')
     def download_file():
-        path = request.args.get('path'); name = request.args.get('name')
-        if not path: return redirect(url_for('dashboard'))
-        return send_file(path, as_attachment=True, download_name=name or Path(path).name)
+        path = request.args.get('path')
+        name = request.args.get('name')
+        if not path:
+            return redirect(url_for('dashboard'))
+        target = Path(path).resolve()
+        allowed_roots = [DATA_ROOT.resolve()]
+        if not any(target.is_relative_to(root) for root in allowed_roots):
+            flash('Ruta de descarga no permitida.', 'error')
+            return redirect(url_for('dashboard'))
+        if not target.exists() or not target.is_file():
+            flash('Archivo no encontrado.', 'error')
+            return redirect(url_for('dashboard'))
+        if target.suffix.lower() not in (ALLOWED_UPLOADS | {'.sqlite3'}):
+            flash('Tipo de archivo no permitido.', 'error')
+            return redirect(url_for('dashboard'))
+        return send_file(target, as_attachment=True, download_name=name or target.name)
 
     def add_catalog_row(table: str):
         db = get_db(); name = request.form.get('name', '').strip()
@@ -630,8 +759,47 @@ def scalar(db, sql: str, params: tuple = ()):
     row = db.execute(sql, params).fetchone()
     if row is None:
         return 0
-    val = row[0]
+    if isinstance(row, dict):
+        val = next(iter(row.values()))
+    else:
+        val = row[0]
     return val if val is not None else 0
+
+
+def current_user():
+    user_id = session.get('user_id')
+    if not user_id:
+        return None
+    db = get_db()
+    return db.execute(
+        'SELECT id, email, role, active, created_at, last_login_at FROM users WHERE id = ? AND active = 1',
+        (user_id,),
+    ).fetchone()
+
+
+def admin_required(view):
+    @wraps(view)
+    def wrapped(*args, **kwargs):
+        user = getattr(g, 'current_user', None)
+        if not user:
+            return redirect(url_for('login'))
+        if user['role'] != 'admin':
+            flash('Acceso restringido a administradores.', 'error')
+            return redirect(url_for('dashboard'))
+        return view(*args, **kwargs)
+    return wrapped
+
+
+def ensure_admin_user(db) -> None:
+    total = scalar(db, 'SELECT COUNT(*) FROM users')
+    if total > 0:
+        return
+    admin_email = os.environ.get('MBARETE_ADMIN_EMAIL', 'admin@mbarete.local').strip().lower()
+    admin_password = os.environ.get('MBARETE_ADMIN_PASSWORD', 'admin123')
+    db.execute(
+        'INSERT INTO users (email, password_hash, role, active) VALUES (?, ?, ?, 1)',
+        (admin_email, generate_password_hash(admin_password), 'admin'),
+    )
 
 
 def parse_client_form(req) -> dict:
@@ -786,13 +954,14 @@ def create_domain_hosting_note(folder_path: Path, client, project_data: dict) ->
 def ensure_defaults() -> None:
     db = get_db()
     for key, value in DEFAULT_SETTINGS.items():
-        db.execute('INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)', (key, value))
+        db.execute('INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO NOTHING', (key, value))
     if scalar(db, 'SELECT COUNT(*) FROM service_catalog') == 0:
         db.executemany('INSERT INTO service_catalog (name, category, service_kind, description, base_price, active) VALUES (?, ?, ?, ?, ?, 1)', DEFAULT_SERVICES)
     if scalar(db, 'SELECT COUNT(*) FROM payment_methods') == 0:
         db.executemany('INSERT INTO payment_methods (name, description, sort_order, active) VALUES (?, ?, ?, 1)', DEFAULT_PAYMENT_METHODS)
     if scalar(db, 'SELECT COUNT(*) FROM payment_conditions') == 0:
         db.executemany('INSERT INTO payment_conditions (name, description, sort_order, active) VALUES (?, ?, ?, 1)', DEFAULT_PAYMENT_CONDITIONS)
+    ensure_admin_user(db)
     db.commit()
 
 
