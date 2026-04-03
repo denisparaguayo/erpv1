@@ -1,0 +1,7 @@
+{% extends 'base.html' %}
+{% block title %}Presupuestos · ERP Mbarete{% endblock %}
+{% block content %}
+<section class="page-header"><div><h2>Presupuestos</h2><p class="muted">Presupuesto → aprobación → proyecto.</p></div><a class="button" href="{{ url_for('budgets_form') }}">Nuevo presupuesto</a></section>
+<form method="get" class="search-row card compact"><input name="q" placeholder="Buscar presupuesto..." value="{{ q }}"><button class="button">Buscar</button></form>
+<section class="card"><table><thead><tr><th>Código</th><th>Cliente</th><th>Servicio principal</th><th>Total</th><th>Estado</th><th></th></tr></thead><tbody>{% for b in budgets %}<tr><td><a href="{{ url_for('budget_detail', budget_id=b.id) }}">{{ b.code or ('PRES-' ~ b.id) }}</a></td><td>{{ b.business_name }}</td><td>{{ b.main_service_name or b.title or '-' }}</td><td>{{ gs(b.total_amount) }}</td><td>{{ b.status }}</td><td><a href="{{ url_for('budgets_form', budget_id=b.id) }}">Editar</a></td></tr>{% else %}<tr><td colspan="6">Sin presupuestos.</td></tr>{% endfor %}</tbody></table></section>
+{% endblock %}

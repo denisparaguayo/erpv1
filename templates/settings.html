@@ -1,0 +1,41 @@
+{% extends 'base.html' %}
+{% block title %}Configuración · ERP Mbarete{% endblock %}
+{% block content %}
+<section class="page-header"><div><h2>Configuración general</h2><p class="muted">App {{ meta.app_version }} · Esquema {{ meta.schema_version }}</p><p class="muted small-note">Ruta de datos: {{ data_root }}</p><p class="muted small-note">Archivo de config: {{ config_file }}</p></div></section>
+<div class="two-col">
+  <section class="card">
+    <h3>Datos de la agencia</h3>
+    <form method="post" action="{{ url_for('settings_general_save') }}" enctype="multipart/form-data" class="form-grid">
+      <label>Nombre comercial<input name="agency_name" value="{{ settings.agency_name }}"></label>
+      <label>Subtítulo<input name="agency_subtitle" value="{{ settings.agency_subtitle }}"></label>
+      <label>Ubicación<input name="agency_location" value="{{ settings.agency_location }}"></label>
+      <label>RUC<input name="agency_ruc" value="{{ settings.agency_ruc }}"></label>
+      <label class="full">Dirección<input name="agency_address" value="{{ settings.agency_address }}"></label>
+      <label>Teléfono<input name="agency_phone" value="{{ settings.agency_phone }}"></label>
+      <label>WhatsApp<input name="agency_whatsapp" value="{{ settings.agency_whatsapp }}"></label>
+      <label>Email<input name="agency_email" value="{{ settings.agency_email }}"></label>
+      <label>Sitio web<input name="agency_website" value="{{ settings.agency_website }}"></label>
+      <label>Moneda principal<select name="currency_code"><option value="PYG" {% if settings.currency_code == 'PYG' %}selected{% endif %}>Guaraníes</option><option value="USD" {% if settings.currency_code == 'USD' %}selected{% endif %}>Dólar</option></select></label>
+      <label>Tipo de cambio USD<input name="usd_exchange_rate" type="number" min="1" value="{{ settings.usd_exchange_rate }}"></label>
+      <label>IVA %<input name="vat_percent" type="number" min="0" value="{{ settings.vat_percent }}"></label>
+      <label>Próxima factura<input name="next_invoice_number" type="number" min="1" value="{{ settings.next_invoice_number }}"></label>
+      <label>Próximo recibo<input name="next_receipt_number" type="number" min="1" value="{{ settings.next_receipt_number }}"></label>
+      <label class="full">Condición por defecto<input name="invoice_default_condition" value="{{ settings.invoice_default_condition }}"></label>
+      <label class="full">Texto del pie de factura / recibo<textarea name="invoice_default_notes" rows="3">{{ settings.invoice_default_notes }}</textarea></label>
+      <label class="full">Logo de la agencia<input type="file" name="logo_file" accept=".png,.jpg,.jpeg,.webp,.svg"></label>
+      <label class="checkbox full"><input type="checkbox" name="show_logo_on_invoice" value="1" {% if settings.show_logo_on_invoice == '1' %}checked{% endif %}> Mostrar logo en factura/recibo</label>
+      {% if settings.logo_path %}<div class="logo-preview full"><img src="{{ url_for('download_file', path=settings.logo_path, name='logo_agencia') }}" alt="Logo actual"><div class="button-row top-margin"><span class="muted">Logo actual cargado.</span><button class="button danger small-btn" type="submit" form="delete-logo-form">Borrar logo</button></div></div>{% endif %}
+      <div class="form-actions"><button class="button">Guardar configuración</button></div>
+    </form>
+    <form id="delete-logo-form" method="post" action="{{ url_for('settings_logo_delete') }}" onsubmit="return confirm('¿Eliminar logo actual?')"></form>
+  </section>
+  <section class="card">
+    <h3>Formas de pago</h3>
+    <form method="post" action="{{ url_for('payment_methods_add') }}" class="form-grid small"><label>Nombre<input name="name" required></label><label>Orden<input name="sort_order" type="number" value="99"></label><label class="full">Descripción<input name="description"></label><div class="form-actions"><button class="button">Agregar forma de pago</button></div></form>
+    <table><thead><tr><th>Nombre</th><th>Estado</th><th></th></tr></thead><tbody>{% for m in methods %}<tr><td><strong>{{ m.name }}</strong>{% if m.description %}<br><small>{{ m.description }}</small>{% endif %}</td><td>{{ 'Activo' if m.active else 'Inactivo' }}</td><td class="button-row"><form method="post" action="{{ url_for('payment_methods_toggle', row_id=m.id) }}"><button class="button secondary small-btn" type="submit">{{ 'Desactivar' if m.active else 'Activar' }}</button></form><form method="post" action="{{ url_for('payment_methods_delete', row_id=m.id) }}" onsubmit="return confirm('¿Eliminar forma de pago?')"><button class="button danger small-btn" type="submit">Borrar</button></form></td></tr>{% else %}<tr><td colspan="3">Sin formas de pago.</td></tr>{% endfor %}</tbody></table>
+    <h3 class="top-margin">Condiciones de pago</h3>
+    <form method="post" action="{{ url_for('payment_conditions_add') }}" class="form-grid small"><label>Nombre<input name="name" required></label><label>Orden<input name="sort_order" type="number" value="99"></label><label class="full">Descripción<input name="description"></label><div class="form-actions"><button class="button">Agregar condición</button></div></form>
+    <table><thead><tr><th>Nombre</th><th>Estado</th><th></th></tr></thead><tbody>{% for m in conditions %}<tr><td><strong>{{ m.name }}</strong>{% if m.description %}<br><small>{{ m.description }}</small>{% endif %}</td><td>{{ 'Activo' if m.active else 'Inactivo' }}</td><td class="button-row"><form method="post" action="{{ url_for('payment_conditions_toggle', row_id=m.id) }}"><button class="button secondary small-btn" type="submit">{{ 'Desactivar' if m.active else 'Activar' }}</button></form><form method="post" action="{{ url_for('payment_conditions_delete', row_id=m.id) }}" onsubmit="return confirm('¿Eliminar condición?')"><button class="button danger small-btn" type="submit">Borrar</button></form></td></tr>{% else %}<tr><td colspan="3">Sin condiciones de pago.</td></tr>{% endfor %}</tbody></table>
+  </section>
+</div>
+{% endblock %}

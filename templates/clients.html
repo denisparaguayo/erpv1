@@ -1,0 +1,30 @@
+{% extends 'base.html' %}
+{% block title %}Clientes · ERP Mbarete{% endblock %}
+{% block content %}
+<section class="page-header">
+  <div><h2>Clientes</h2><p class="muted">Buscá por negocio, responsable, WhatsApp o email.</p></div>
+  <a class="button" href="{{ url_for('clients_new') }}">Nuevo cliente</a>
+</section>
+<form method="get" class="search-row card compact">
+  <input name="q" placeholder="Buscar cliente..." value="{{ q }}">
+  <button class="button">Buscar</button>
+</form>
+<section class="card">
+<table>
+  <thead><tr><th>Código</th><th>Negocio</th><th>Responsable</th><th>WhatsApp</th><th></th></tr></thead>
+  <tbody>
+  {% for client in clients %}
+    <tr>
+      <td>{{ client.code or ('CLI-' ~ client.id) }}</td>
+      <td><a href="{{ url_for('client_detail', client_id=client.id) }}">{{ client.business_name }}</a></td>
+      <td>{{ client.owner_name or '-' }}</td>
+      <td>{{ client.whatsapp or '-' }}</td>
+      <td><a href="{{ url_for('clients_edit', client_id=client.id) }}">Editar</a></td>
+    </tr>
+  {% else %}
+    <tr><td colspan="5">No se encontraron clientes.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</section>
+{% endblock %}

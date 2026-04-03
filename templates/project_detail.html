@@ -1,0 +1,204 @@
+{% extends 'base.html' %}
+{% block title %}Proyecto · ERP Mbarete{% endblock %}
+{% block content %}
+<section class="page-header">
+  <div>
+    <h2>{{ project.code }} · {{ project.business_name }}</h2>
+    <p class="muted"><span class="traffic-dot {{ traffic_status_for_project(project) }}"></span> {{ project.plan }} · {{ project.status }} · Carpeta: {{ project.folder_path }}</p>
+  </div>
+  <div class="button-row">
+    <a class="button secondary" href="{{ url_for('projects_form', project_id=project.id) }}">Editar proyecto</a>
+    <form method="post" action="{{ url_for('open_project_folder', project_id=project.id) }}"><button class="button secondary" type="submit">Abrir carpeta</button></form>
+  </div>
+</section>
+<div class="three-col">
+  <section class="card compact">
+    <h3>Resumen</h3>
+    <dl class="meta-grid">
+      <dt>Total</dt><dd>{{ gs(project.total_amount) }}</dd>
+      <dt>Entrega</dt><dd>{{ project.due_date or '-' }}</dd>
+      <dt>Servicio principal</dt><dd>{{ project.plan }}</dd>
+      <dt>URL final</dt><dd>{{ project.final_url or '-' }}</dd>
+    </dl>
+  </section>
+  <section class="card compact">
+    <h3>Servicios del proyecto</h3>
+    <ul class="activity-list">
+      {% for item in project_items %}
+      <li><strong>{{ item.service_name }}</strong><span>{{ 'Principal' if item.item_role == 'principal' else 'Extra' }} · {{ gs(item.line_total) }}</span></li>
+      {% else %}<li>Sin servicios asociados.</li>{% endfor %}
+    </ul>
+  </section>
+  <section class="card compact">
+    <h3>Builder independiente</h3>
+    <form method="post" action="{{ url_for('add_version', project_id=project.id) }}" enctype="multipart/form-data" class="form-grid small">
+      <label class="full">HTML generado<input type="file" name="html_file" accept=".html" required></label>
+      <label class="full">URL publicada<input name="published_url" placeholder="https://..."></label>
+      <label class="full">Notas<textarea name="notes" rows="2"></textarea></label>
+      <label class="checkbox"><input type="checkbox" name="is_final" value="1"> Marcar como versión final</label>
+      <div class="form-actions"><button class="button">Guardar versión</button></div>
+    </form>
+  </section>
+</div>
+
+<div class="two-col">
+  <section class="card">
+    <h3>Generar factura / recibo</h3>
+    <form method="post" action="{{ url_for('add_payment', project_id=project.id) }}" class="form-grid small">
+      <label>Tipo<select name="document_type"><option value="factura">Factura</option><option value="recibo">Recibo</option></select></label>
+      <label>N° documento<input name="document_number" placeholder="Autonumérico si queda vacío"></label>
+      <label>Fecha<input name="issue_date" type="date" value="{{ today }}"></label>
+      <label>Método<select name="payment_method"><option value="">Seleccionar</option>{% for m in payment_methods %}<option value="{{ m.name }}">{{ m.name }}</option>{% endfor %}</select></label>
+      <label>Condición<select name="payment_condition">{% for cond in payment_conditions %}<option value="{{ cond.name }}" {% if settings.invoice_default_condition==cond.name %}selected{% endif %}>{{ cond.name }}</option>{% endfor %}</select></label>
+      <label>Referencia<input name="reference_number"></label>
+      <label>Estado del pago<select name="status"><option value="Pendiente" selected>Pendiente</option><option value="Pagado">Pagado</option><option value="Vencido">Vencido</option></select></label>
+      <label>Moneda<select name="currency_code" id="currency-code-select"><option value="PYG" {% if settings.currency_code=='PYG' %}selected{% endif %}>Guaraníes (PYG)</option><option value="USD" {% if settings.currency_code=='USD' %}selected{% endif %}>Dólar (USD)</option></select></label>
+      <label>Tipo de cambio<input name="exchange_rate" id="exchange-rate-input" type="number" min="1" step="0.01" value="{{ settings.usd_exchange_rate or 7800 }}"></label>
+      <label class="full">Descripción principal<input name="description" placeholder="Opcional"></label>
+      <div class="full">
+        <table class="invoice-items-table" id="invoice-items-table">
+          <thead><tr><th>Tipo</th><th>Servicio</th><th>Descripción</th><th>Cant.</th><th>Precio unitario</th><th>Total</th><th></th></tr></thead>
+          <tbody id="invoice-items-body"></tbody>
+        </table>
+        <div class="button-row top-margin"><button type="button" class="button secondary" onclick="addInvoiceRow()">Agregar ítem</button><span class="muted">La factura empieza vacía. Agregá solo los ítems que quieras facturar.</span></div>
+      </div>
+      <label class="full">Observaciones<textarea name="observations" rows="2"></textarea></label>
+      <p class="muted full">La factura calcula subtotal, IVA y total automáticamente desde los ítems. Moneda actual: {{ settings.currency_code }}{% if settings.currency_code == 'USD' %} · Cambio: 1 USD = Gs. {{ settings.usd_exchange_rate }}{% endif %}</p>
+      <div class="form-actions"><button class="button">Generar PDF</button></div>
+    </form>
+  </section>
+  <section class="card">
+    <h3>Archivos del proyecto</h3>
+    <form method="post" action="{{ url_for('add_file', project_id=project.id) }}" enctype="multipart/form-data" class="form-grid small">
+      <label>Categoría<select name="category">{% for c in ['Documento','Logo cliente','Material cliente','Contrato','Factura','Recibo','SEO','Comunicación','Entregable'] %}<option value="{{ c }}">{{ c }}</option>{% endfor %}</select></label>
+      <label>Corresponde a<input name="purpose" placeholder="Ej: logo principal, contrato firmado"></label>
+      <label class="full">Archivo<input type="file" name="project_file" required></label>
+      <label class="full">Notas<input name="notes" placeholder="Comentario interno opcional"></label>
+      <div class="form-actions"><button class="button">Subir archivo</button></div>
+    </form>
+    <table>
+      <thead><tr><th>Tipo</th><th>Corresponde a</th><th>Archivo</th><th></th></tr></thead>
+      <tbody>
+      {% for item in files %}
+        <tr><td>{{ item.category }}</td><td>{{ item.purpose or '-' }}</td><td><strong>{{ item.original_name }}</strong>{% if item.notes %}<br><small>{{ item.notes }}</small>{% endif %}</td><td><a href="{{ url_for('download_file', path=item.relative_path, name=item.original_name) }}">Descargar</a></td></tr>
+      {% else %}<tr><td colspan="4">Todavía no hay archivos.</td></tr>{% endfor %}
+      </tbody>
+    </table>
+  </section>
+</div>
+
+<div class="two-col">
+  <section class="card">
+    <h3>Pagos / comprobantes</h3>
+    <table>
+      <thead><tr><th></th><th>Tipo</th><th>N°</th><th>Total</th><th>IVA</th><th>Estado</th><th></th></tr></thead>
+      <tbody>
+      {% for p in payments %}
+        <tr>
+          <td><span class="traffic-dot {{ traffic_status_for_payment(p) }}"></span></td>
+          <td>{{ p.document_type }}</td>
+          <td>{{ p.document_number }}</td>
+          <td>{{ money(p.total, p.currency_code, p.exchange_rate) }}</td>
+          <td>{{ money(p.vat_included, p.currency_code, p.exchange_rate) }}</td>
+          <td>
+            <span class="badge {{ 'success' if p.status == 'Pagado' else ('danger' if p.status == 'Vencido' else 'warning') }}">{{ p.status }}</span>
+            {% if p.paid_date %}<br><small>{{ p.paid_date }}</small>{% endif %}
+          </td>
+          <td>
+            <div class="inline-actions">
+              <a href="{{ url_for('payment_pdf', payment_id=p.id) }}">PDF</a>
+              {% if p.status != 'Pagado' %}
+              <form method="post" action="{{ url_for('payment_status_update', payment_id=p.id) }}" style="display:inline">
+                <input type="hidden" name="status" value="Pagado">
+                <button class="button small-btn" type="submit">Marcar pagado</button>
+              </form>
+              {% else %}
+              <form method="post" action="{{ url_for('payment_status_update', payment_id=p.id) }}" style="display:inline">
+                <input type="hidden" name="status" value="Pendiente">
+                <button class="button secondary small-btn" type="submit">Volver a pendiente</button>
+              </form>
+              {% endif %}
+            </div>
+          </td>
+        </tr>
+        {% if payment_items[p.id] %}<tr><td colspan="7"><small>{% for it in payment_items[p.id] %}[{{ it.item_type }}] {{ it.description }} x{{ it.quantity }} = {{ money(it.total, p.currency_code, p.exchange_rate) }}{% if not loop.last %} · {% endif %}{% endfor %}</small></td></tr>{% endif %}
+      {% else %}<tr><td colspan="7">Sin comprobantes aún.</td></tr>{% endfor %}
+      </tbody>
+    </table>
+  </section>
+  <section class="card">
+    <h3>Versiones HTML</h3>
+    <table>
+      <thead><tr><th>Versión</th><th>Archivo</th><th>Final</th><th></th></tr></thead>
+      <tbody>
+      {% for v in versions %}<tr><td>v{{ v.version_number }}</td><td>{{ v.original_name }}</td><td>{{ 'Sí' if v.is_final else 'No' }}</td><td><a href="{{ url_for('download_file', path=v.relative_path, name=v.original_name) }}">Descargar</a></td></tr>{% else %}<tr><td colspan="4">Todavía no hay versiones HTML.</td></tr>{% endfor %}
+      </tbody>
+    </table>
+  </section>
+</div>
+
+<div class="two-col">
+  <section class="card">
+    <h3>Renovaciones</h3>
+    <form method="post" action="{{ url_for('add_renewal', project_id=project.id) }}" class="form-grid small">
+      <label>Tipo<input name="renewal_type" placeholder="Dominio / Hosting / SEO" required></label>
+      <label>Monto<input name="amount" type="number" min="0"></label>
+      <label>Vencimiento<input name="due_date" type="date" required></label>
+      <label>Estado<select name="status"><option>Pendiente</option><option>Pagado</option><option>Vencido</option></select></label>
+      <label class="full">Notas<input name="notes"></label>
+      <div class="form-actions"><button class="button">Agregar renovación</button></div>
+    </form>
+    <ul class="activity-list">{% for r in renewals %}<li><strong><span class="traffic-dot {{ traffic_status_for_renewal(r) }}"></span> {{ r.renewal_type }}</strong><span>{{ gs(r.amount) }} · {{ r.due_date }} · {{ r.status }}</span></li>{% else %}<li>Sin renovaciones cargadas.</li>{% endfor %}</ul>
+  </section>
+  <section class="card">
+    <h3>Actividad</h3>
+    <ul class="activity-list">{% for item in activities %}<li><strong>{{ item.action }}</strong><span>{{ item.details }}</span><small>{{ item.created_at }}</small></li>{% else %}<li>Sin actividad registrada.</li>{% endfor %}</ul>
+  </section>
+</div>
+
+<script>
+function moneyPreview(value){
+  const currency = document.getElementById('currency-code-select')?.value || 'PYG';
+  if(currency === 'USD'){ return new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'}).format(value || 0); }
+  return 'Gs. ' + new Intl.NumberFormat('es-PY').format(value || 0).replace(/,/g,'.');
+}
+function updateRow(row){
+  const qty = parseFloat(row.querySelector('input[name="item_quantity[]"]').value || '1');
+  const unit = parseFloat(row.querySelector('input[name="item_unit_price[]"]').value || '0');
+  row.querySelector('.line-total-preview').textContent = moneyPreview(qty*unit);
+}
+
+function bindServiceSelect(select){
+  select.addEventListener('change', function(){
+    const row = select.closest('tr'); const opt = select.options[select.selectedIndex];
+    if(opt.dataset.name){ row.querySelector('input[name="item_description[]"]').value = opt.dataset.name; }
+    if(opt.dataset.price){ row.querySelector('input[name="item_unit_price[]"]').value = opt.dataset.price; }
+    updateRow(row);
+  });
+}
+function bindRow(row){
+  bindServiceSelect(row.querySelector('.service-select'));
+  row.querySelectorAll('input[name="item_quantity[]"], input[name="item_unit_price[]"]').forEach(el => el.addEventListener('input', () => updateRow(row)));
+  updateRow(row);
+}
+function newInvoiceRowHtml(){
+  return `<tr class="invoice-item-row">
+              <td><select name="item_type[]"><option>Servicio</option><option>Extra</option><option>Dominio</option><option>Hosting</option><option>Otro</option></select></td>
+              <td><select name="service_id[]" class="service-select"><option value="">Manual</option>{% for s in service_catalog %}<option value="{{ s.id }}" data-price="{{ s.base_price }}" data-name="{{ s.name }}">{{ s.category }} · {{ s.name }} — {{ gs(s.base_price) }}</option>{% endfor %}</select></td>
+              <td><input name="item_description[]" placeholder="Descripción"></td>
+              <td><input name="item_quantity[]" type="number" min="1" value="1"></td>
+              <td><input name="item_unit_price[]" type="number" min="0" step="0.01" value="0"></td>
+              <td class="line-total-preview">${moneyPreview(0)}</td>
+              <td><button type="button" class="button danger small-btn" onclick="removeInvoiceRow(this)">X</button></td>
+            </tr>`;
+}
+function addInvoiceRow(){
+  const body = document.getElementById('invoice-items-body');
+  body.insertAdjacentHTML('beforeend', newInvoiceRowHtml());
+  bindRow(body.lastElementChild);
+}
+function removeInvoiceRow(btn){ btn.closest('tr').remove(); }
+document.querySelectorAll('.invoice-item-row').forEach(bindRow);
+document.getElementById('currency-code-select')?.addEventListener('change', ()=>document.querySelectorAll('.invoice-item-row').forEach(updateRow));
+</script>
+{% endblock %}

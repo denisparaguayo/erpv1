@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}ERP Mbarete{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}">
+</head>
+<body>
+  <aside class="sidebar">
+    <div class="brand-box">
+      {% if settings.logo_path %}
+        <img src="{{ url_for('download_file', path=settings.logo_path, name='logo_agencia') }}" alt="Logo" class="sidebar-logo">
+      {% endif %}
+      <p class="muted">v{{ app_version }}</p>
+      <p class="muted small-note">Datos: {{ data_root }}</p>
+    </div>
+    <nav>
+      <a class="{% if request.endpoint == 'dashboard' %}active{% endif %}" href="{{ url_for('dashboard') }}">Dashboard</a>
+      <a class="{% if request.endpoint in ['clients_index','clients_new','clients_edit','client_detail'] %}active{% endif %}" href="{{ url_for('clients_index') }}">Clientes</a>
+      <a class="{% if request.endpoint in ['budgets_index','budgets_form','budget_detail'] %}active{% endif %}" href="{{ url_for('budgets_index') }}">Presupuestos</a>
+      <a class="{% if request.endpoint in ['projects_index','projects_form','project_detail'] %}active{% endif %}" href="{{ url_for('projects_index') }}">Proyectos</a>
+      <a class="{% if request.endpoint in ['services_index','services_form'] %}active{% endif %}" href="{{ url_for('services_index') }}">Servicios</a>
+      <a class="{% if request.endpoint in ['settings_page'] %}active{% endif %}" href="{{ url_for('settings_page') }}">Configuración</a>
+      <a href="{{ url_for('clients_new') }}">Nuevo cliente</a>
+      <a href="{{ url_for('budgets_form') }}">Nuevo presupuesto</a>
+      <a href="{{ url_for('projects_form') }}">Nuevo proyecto</a>
+      <a href="{{ url_for('download_backup') }}">Descargar backup</a>
+    </nav>
+  </aside>
+  <main class="content">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="flash-stack">
+          {% for category, message in messages %}
+            <div class="flash {{ category }}">{{ message }}</div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+    {% block content %}{% endblock %}
+  </main>
+</body>
+</html>

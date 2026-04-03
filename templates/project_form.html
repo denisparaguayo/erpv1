@@ -1,0 +1,70 @@
+{% extends 'base.html' %}
+{% block title %}{{ 'Editar' if project else 'Nuevo' }} proyecto{% endblock %}
+{% block content %}
+<section class="page-header"><div><h2>{{ 'Editar' if project else 'Nuevo' }} proyecto</h2></div></section>
+<form method="post" class="card stacked-form">
+  <section class="form-block">
+    <h3>Datos principales</h3>
+    <div class="form-grid">
+      <label>Cliente<select name="client_id" required>{% for c in clients %}<option value="{{ c.id }}" {% if project and project.client_id==c.id %}selected{% endif %}>{{ c.business_name }}</option>{% endfor %}</select></label>
+      <label>Servicio principal
+        {% set selected_ids = project_items|map(attribute='service_id')|list if project_items else [] %}
+        <select name="main_service_id">
+          <option value="">Seleccionar servicio principal</option>
+          <option value="custom" {% if project and not project.main_service_id and project.plan=='Proyecto personalizado' %}selected{% endif %}>Proyecto personalizado</option>
+          {% for s in services %}
+            <option value="{{ s.id }}" {% if project and project.main_service_id==s.id %}selected{% endif %}>{{ s.category }} · {{ s.name }} — {{ gs(s.base_price) }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label class="full">Servicios adicionales / extras</label>
+      <div class="full checkbox-grid service-checks">
+        {% for s in services %}
+          <label class="checkbox card-check"><input type="checkbox" name="extra_service_ids" value="{{ s.id }}" {% if s.id in selected_ids and (not project or s.id != project.main_service_id) %}checked{% endif %}> <span>{{ s.category }} · {{ s.name }}</span><small>{{ gs(s.base_price) }}</small></label>
+        {% endfor %}
+      </div>
+      <label>Condición de pago<select name="payment_condition">{% for cond in conditions %}<option value="{{ cond.name }}" {% if project and project.payment_condition==cond.name %}selected{% elif not project and settings.invoice_default_condition==cond.name %}selected{% endif %}>{{ cond.name }}</option>{% endfor %}</select></label>
+      <label>Estado<select name="status"><option {% if not project or project.status=='En desarrollo' %}selected{% endif %}>En desarrollo</option><option {% if project and project.status=='Entregado' %}selected{% endif %}>Entregado</option><option {% if project and project.status=='Activo' %}selected{% endif %}>Activo</option><option {% if project and project.status=='Inactivo' %}selected{% endif %}>Inactivo</option></select></label>
+      <label>Fecha inicio<input name="start_date" type="date" value="{{ project.start_date if project else today }}"></label>
+      <label>Fecha entrega<input name="due_date" type="date" value="{{ project.due_date if project else '' }}"></label>
+    </div>
+  </section>
+
+  <section class="form-block">
+    <h3>Dominio</h3>
+    <div class="form-grid">
+      <label class="checkbox"><input type="checkbox" name="client_has_domain" value="1" {% if project and project.client_has_domain %}checked{% endif %}> Cliente ya tiene dominio</label>
+      <div></div>
+      <label>Dominio<input name="domain_name" value="{{ project.domain_name if project else '' }}"></label>
+      <label>Proveedor dominio<input name="domain_provider" value="{{ project.domain_provider if project else '' }}"></label>
+      <label>Estado dominio<input name="domain_status" value="{{ project.domain_status if project else '' }}"></label>
+      <label>Usuario dominio<input name="domain_user" value="{{ project.domain_user if project else '' }}"></label>
+      <label>Contraseña dominio<input name="domain_password" value="{{ project.domain_password if project else '' }}"></label>
+      <label>Vencimiento dominio<input name="domain_expiry" type="date" value="{{ project.domain_expiry if project else '' }}"></label>
+    </div>
+  </section>
+
+  <section class="form-block">
+    <h3>Hosting</h3>
+    <div class="form-grid">
+      <label class="checkbox"><input type="checkbox" name="external_hosting" value="1" {% if project and project.external_hosting %}checked{% endif %}> Hosting externo / distinto</label>
+      <div></div>
+      <label>Proveedor hosting<input name="hosting_provider" value="{{ project.hosting_provider if project else '' }}"></label>
+      <label>Estado hosting<input name="hosting_status" value="{{ project.hosting_status if project else '' }}"></label>
+      <label>Usuario hosting<input name="hosting_user" value="{{ project.hosting_user if project else '' }}"></label>
+      <label>Contraseña hosting<input name="hosting_password" value="{{ project.hosting_password if project else '' }}"></label>
+      <label>Vencimiento hosting<input name="hosting_expiry" type="date" value="{{ project.hosting_expiry if project else '' }}"></label>
+    </div>
+  </section>
+
+  <section class="form-block">
+    <h3>Notas</h3>
+    <div class="form-grid">
+      <label class="full">Notas generales<textarea name="notes" rows="2">{{ project.notes if project else '' }}</textarea></label>
+      <label class="full">Notas técnicas<textarea name="technical_notes" rows="2">{{ project.technical_notes if project else '' }}</textarea></label>
+    </div>
+  </section>
+
+  <div class="form-actions button-row"><button class="button">Guardar proyecto</button>{% if project %}<a class="button secondary" href="{{ url_for('project_detail', project_id=project.id) }}">Cancelar</a>{% endif %}</div>
+</form>
+{% endblock %}

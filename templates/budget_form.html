@@ -1,0 +1,16 @@
+{% extends 'base.html' %}
+{% block title %}{{ 'Editar' if budget else 'Nuevo' }} presupuesto{% endblock %}
+{% block content %}
+<section class="page-header"><div><h2>{{ 'Editar' if budget else 'Nuevo' }} presupuesto</h2></div></section>
+<form method="post" class="card stacked-form">
+  <section class="form-block"><h3>Datos principales</h3><div class="form-grid">
+    <label>Cliente<select name="client_id" required>{% for c in clients %}<option value="{{ c.id }}" {% if budget and budget.client_id==c.id %}selected{% endif %}>{{ c.business_name }}</option>{% endfor %}</select></label>
+    {% set selected_ids = budget_items|map(attribute='service_id')|list if budget_items else [] %}<label>Servicio principal<select name="main_service_id"><option value="">Seleccionar</option><option value="custom" {% if budget and not budget.main_service_id and budget.title=='Proyecto personalizado' %}selected{% endif %}>Proyecto personalizado</option>{% for s in services %}<option value="{{ s.id }}" {% if budget and budget.main_service_id==s.id %}selected{% endif %}>{{ s.category }} · {{ s.name }} — {{ gs(s.base_price) }}</option>{% endfor %}</select></label>
+    <label class="full">Servicios adicionales / extras</label><div class="full checkbox-grid service-checks">{% for s in services %}<label class="checkbox card-check"><input type="checkbox" name="extra_service_ids" value="{{ s.id }}" {% if s.id in selected_ids and (not budget or s.id != budget.main_service_id) %}checked{% endif %}> <span>{{ s.category }} · {{ s.name }}</span><small>{{ gs(s.base_price) }}</small></label>{% endfor %}</div>
+    <label>Condición de pago<select name="payment_condition">{% for cond in conditions %}<option value="{{ cond.name }}" {% if budget and budget.payment_condition==cond.name %}selected{% elif not budget and settings.invoice_default_condition==cond.name %}selected{% endif %}>{{ cond.name }}</option>{% endfor %}</select></label>
+    <label>Estado<select name="status"><option {% if not budget or budget.status=='Borrador' %}selected{% endif %}>Borrador</option><option {% if budget and budget.status=='Enviado' %}selected{% endif %}>Enviado</option><option {% if budget and budget.status=='Aprobado' %}selected{% endif %}>Aprobado</option><option {% if budget and budget.status=='Convertido' %}selected{% endif %}>Convertido</option></select></label>
+    <label class="full">Notas<textarea name="notes" rows="3">{{ budget.notes if budget else '' }}</textarea></label>
+  </div></section>
+  <div class="form-actions button-row"><button class="button">Guardar presupuesto</button>{% if budget %}<a class="button secondary" href="{{ url_for('budget_detail', budget_id=budget.id) }}">Cancelar</a>{% endif %}</div>
+</form>
+{% endblock %}

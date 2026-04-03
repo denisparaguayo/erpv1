@@ -1,0 +1,20 @@
+{% extends 'base.html' %}
+{% block title %}{{ 'Editar' if client else 'Nuevo' }} cliente{% endblock %}
+{% block content %}
+<section class="page-header"><div><h2>{{ 'Editar' if client else 'Nuevo' }} cliente</h2></div></section>
+<form method="post" class="card form-grid">
+  <label>Nombre del negocio<input name="business_name" required value="{{ client.business_name if client else '' }}"></label>
+  <label>Rubro<input name="category" value="{{ client.category if client else '' }}"></label>
+  <label>Responsable<input name="owner_name" value="{{ client.owner_name if client else '' }}"></label>
+  <label>WhatsApp<input name="whatsapp" value="{{ client.whatsapp if client else '' }}"></label>
+  <label>Teléfono<input name="phone" value="{{ client.phone if client else '' }}"></label>
+  <label>Email<input name="email" value="{{ client.email if client else '' }}"></label>
+  <label class="full">Dirección<input name="address" value="{{ client.address if client else '' }}"></label>
+  <label>Ciudad / Barrio<input name="city" value="{{ client.city if client else '' }}"></label>
+  <label>RUC / CI<input name="ruc_ci" value="{{ client.ruc_ci if client else '' }}"></label>
+  <label>Instagram<input name="instagram" value="{{ client.instagram if client else '' }}"></label>
+  <label>Facebook<input name="facebook" value="{{ client.facebook if client else '' }}"></label>
+  <label>Estado<select name="status"><option {% if not client or client.status=='Activo' %}selected{% endif %}>Activo</option><option {% if client and client.status=='Inactivo' %}selected{% endif %}>Inactivo</option></select></label>
+  <div class="form-actions button-row"><button class="button">Guardar cliente</button>{% if client %}<a class="button secondary" href="{{ url_for('client_detail', client_id=client.id) }}">Cancelar</a>{% endif %}</div>
+</form>
+{% endblock %}

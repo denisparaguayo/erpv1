@@ -1,0 +1,10 @@
+{% extends 'base.html' %}
+{% block title %}Cliente · ERP Mbarete{% endblock %}
+{% block content %}
+<section class="page-header"><div><h2>{{ client.business_name }}</h2><p class="muted">{{ client.code }} · {{ client.category or '-' }}</p></div><div class="button-row"><a class="button secondary" href="{{ url_for('clients_edit', client_id=client.id) }}">Editar</a><form method="post" action="{{ url_for('clients_delete', client_id=client.id) }}" onsubmit="return confirm('¿Eliminar cliente?')"><button class="button danger" type="submit">Eliminar</button></form></div></section>
+<div class="two-col">
+  <section class="card"><h3>Datos</h3><dl class="meta-grid"><dt>Responsable</dt><dd>{{ client.owner_name or '-' }}</dd><dt>WhatsApp</dt><dd>{{ client.whatsapp or '-' }}</dd><dt>Email</dt><dd>{{ client.email or '-' }}</dd><dt>Dirección</dt><dd>{{ client.address or '-' }}</dd><dt>RUC / CI</dt><dd>{{ client.ruc_ci or '-' }}</dd></dl></section>
+  <section class="card"><h3>Proyectos</h3><ul class="activity-list">{% for project in projects %}<li><strong><a href="{{ url_for('project_detail', project_id=project.id) }}">{{ project.code }}</a></strong><span>{{ project.plan }} · {{ project.status }}</span></li>{% else %}<li>Sin proyectos todavía.</li>{% endfor %}</ul></section>
+</div>
+<section class="card"><h3>Presupuestos</h3><ul class="activity-list">{% for budget in budgets %}<li><strong><a href="{{ url_for('budget_detail', budget_id=budget.id) }}">{{ budget.code }}</a></strong><span>{{ gs(budget.total_amount) }} · {{ budget.status }}</span></li>{% else %}<li>Sin presupuestos todavía.</li>{% endfor %}</ul></section>
+{% endblock %}

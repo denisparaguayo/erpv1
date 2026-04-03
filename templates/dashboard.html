@@ -1,0 +1,115 @@
+{% extends 'base.html' %}
+{% block title %}Dashboard · ERP Mbarete{% endblock %}
+{% block content %}
+<section class="page-header">
+  <div>
+    <h2>Dashboard</h2>
+    <p class="muted">App {{ meta.app_version }} · Esquema {{ meta.schema_version }} · Urgentes = vencidos o prioridad máxima · Atención = próximos 3 días · Pagos pendientes = comprobantes en pendiente o vencido</p>
+  </div>
+  <div class="button-row">
+    <a class="button" href="{{ url_for('clients_new') }}">Nuevo cliente</a>
+    <a class="button secondary" href="{{ url_for('budgets_form') }}">Nuevo presupuesto</a>
+    <a class="button secondary" href="{{ url_for('projects_form') }}">Nuevo proyecto</a>
+  </div>
+</section>
+<div class="stats-grid">
+  <section class="card stat"><span>Clientes</span><strong>{{ stats.clients }}</strong></section>
+  <section class="card stat"><span>Proyectos activos</span><strong>{{ stats.projects }}</strong></section>
+  <section class="card stat"><span>Ingresos del mes</span><strong>{{ gs(stats.income_month) }}</strong></section>
+  <section class="card stat"><span>Renovaciones pendientes</span><strong>{{ stats.renewals_due }}</strong></section>
+</div>
+<div class="stats-grid compact-grid">
+  <section class="card stat mini"><span>Urgentes</span><strong class="red-text">{{ quick.urgent_count }}</strong><small>Entregas vencidas</small></section>
+  <section class="card stat mini"><span>Atención</span><strong class="yellow-text">{{ quick.warning_count }}</strong><small>Entregas en 1 a 3 días</small></section>
+  <section class="card stat mini"><span>Pagos pendientes</span><strong>{{ gs(quick.pending_amount) }}</strong><small>Solo estados pendiente/vencido</small></section>
+  <section class="card stat mini"><span>Servicios activos</span><strong>{{ stats.services }}</strong></section>
+</div>
+<div class="two-col">
+  <section class="card">
+    <h3>Proyectos en curso y próximas entregas</h3>
+    <table>
+      <thead><tr><th></th><th>Código</th><th>Cliente</th><th>Servicio</th><th>Entrega</th><th>Estado</th></tr></thead>
+      <tbody>
+      {% for project in urgent_projects %}
+        {% set sem = traffic_status_for_project(project) %}
+        <tr>
+          <td><span class="traffic-dot {{ sem }}"></span></td>
+          <td><a href="{{ url_for('project_detail', project_id=project.id) }}">{{ project.code }}</a></td>
+          <td>{{ project.business_name }}</td>
+          <td>{{ project.plan }}</td>
+          <td>{{ project.due_date or '-' }}</td>
+          <td>{{ project.status }}</td>
+        </tr>
+      {% else %}
+        <tr><td colspan="6">Sin proyectos cargados.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </section>
+  <section class="card">
+    <h3>Pagos pendientes</h3>
+    <table>
+      <thead><tr><th></th><th>Cliente</th><th>N°</th><th>Total</th><th>Estado</th></tr></thead>
+      <tbody>
+      {% for p in pending_payments %}
+        {% set sem = traffic_status_for_payment(p) %}
+        <tr>
+          <td><span class="traffic-dot {{ sem }}"></span></td>
+          <td>{{ p.business_name }}</td>
+          <td>{{ p.document_number }}</td>
+          <td>{{ money(p.total, p.currency_code, p.exchange_rate) }}</td>
+          <td>{{ p.status }}</td>
+        </tr>
+      {% else %}
+        <tr><td colspan="5">No hay pagos pendientes.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </section>
+</div>
+<div class="two-col">
+  <section class="card">
+    <h3>Renovaciones próximas</h3>
+    <table>
+      <thead><tr><th></th><th>Proyecto</th><th>Tipo</th><th>Vencimiento</th><th>Monto</th></tr></thead>
+      <tbody>
+      {% for r in renewals %}
+        {% set sem = traffic_status_for_renewal(r) %}
+        <tr>
+          <td><span class="traffic-dot {{ sem }}"></span></td>
+          <td>{{ r.project_code }} · {{ r.business_name }}</td>
+          <td>{{ r.renewal_type }}</td>
+          <td>{{ r.due_date }}</td>
+          <td>{{ gs(r.amount) }}</td>
+        </tr>
+      {% else %}
+        <tr><td colspan="5">Sin renovaciones pendientes.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </section>
+  <section class="card">
+    <h3>Actividad reciente</h3>
+    <ul class="activity-list">
+      {% for item in activities %}
+        <li><strong>{{ item.action }}</strong><span>{{ item.details }}</span><small>#{{ item.id }} · {{ item.created_at }}</small></li>
+      {% else %}
+        <li>Sin actividad todavía.</li>
+      {% endfor %}
+    </ul>
+  </section>
+</div>
+<section class="card">
+  <h3>Últimos proyectos</h3>
+  <table>
+    <thead><tr><th>Código</th><th>Cliente</th><th>Servicio</th><th>Estado</th></tr></thead>
+    <tbody>
+    {% for project in recent_projects %}
+      <tr><td><a href="{{ url_for('project_detail', project_id=project.id) }}">{{ project.code }}</a></td><td>{{ project.business_name }}</td><td>{{ project.plan }}</td><td>{{ project.status }}</td></tr>
+    {% else %}
+      <tr><td colspan="4">Sin proyectos.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endblock %}

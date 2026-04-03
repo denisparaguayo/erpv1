@@ -1,0 +1,14 @@
+{% extends 'base.html' %}
+{% block title %}{{ 'Editar' if service else 'Nuevo' }} servicio{% endblock %}
+{% block content %}
+<section class="page-header"><div><h2>{{ 'Editar' if service else 'Nuevo' }} servicio</h2></div></section>
+<form method="post" class="card form-grid">
+  <label>Nombre<input name="name" required value="{{ service.name if service else '' }}"></label>
+  <label>Categoría<input name="category" value="{{ service.category if service else '' }}"></label>
+  <label>Tipo<select name="service_kind"><option value="principal" {% if service and service.service_kind=='principal' %}selected{% endif %}>Principal</option><option value="extra" {% if not service or service.service_kind!='principal' %}selected{% endif %}>Extra</option></select></label>
+  <label>Precio base<input name="base_price" type="number" min="0" value="{{ service.base_price if service else 0 }}"></label>
+  <label class="full">Descripción<textarea name="description" rows="3">{{ service.description if service else '' }}</textarea></label>
+  <label>Activo<select name="active"><option value="1" {% if not service or service.active %}selected{% endif %}>Sí</option><option value="0" {% if service and not service.active %}selected{% endif %}>No</option></select></label>
+  <div class="form-actions button-row"><button class="button">Guardar servicio</button><a class="button secondary" href="{{ url_for('services_index') }}">Cancelar</a></div>
+</form>
+{% endblock %}
